@@ -135,6 +135,13 @@ def _build_row_split_window_bundles(
     time_column = data_cfg["datetime_column"]
     target_column = data_cfg["target_column"]
     feature_columns = feature_cfg["feature_columns"]
+    physics_cfg = config["train"].get("physics_loss", {})
+    temperature_column = str(physics_cfg.get("temperature_column", "Air_Temperature_celsius"))
+    has_temperature_column = temperature_column in fold_df.columns
+    if physics_cfg.get("enabled", False) and not has_temperature_column:
+        raise ValueError(
+            f"Physics loss requires temperature column '{temperature_column}', but it is missing from the prepared data."
+        )
 
     train_rows = fold_df.loc[fold_df["row_split"] == "train"].copy()
     scaler = fit_feature_scaler(
@@ -163,12 +170,17 @@ def _build_row_split_window_bundles(
         windows: list[torch.Tensor] = []
         targets: list[float] = []
         transformed_targets: list[float] = []
+        anchor_temperatures: list[float] = []
         metadata_rows: list[dict[str, Any]] = []
 
         lake_groups = list(anchor_df.groupby(lake_column))
         for lake_index, (lake_name, lake_anchor_df) in enumerate(lake_groups, start=1):
             lake_history_df = scaled_df.loc[scaled_df[lake_column] == lake_name].copy()
             lake_history_df = lake_history_df.sort_values(time_column).reset_index(drop=True)
+            raw_lake_history_df = fold_df.loc[fold_df[lake_column] == lake_name].copy()
+            raw_lake_history_df = raw_lake_history_df.sort_values(time_column).reset_index(drop=True)
+            if len(lake_history_df) != len(raw_lake_history_df):
+                raise ValueError(f"Scaled/raw lake history length mismatch for lake={lake_name}.")
             anchor_times = set(pd.to_datetime(lake_anchor_df[time_column]).tolist())
 
             for anchor_index in range(len(lake_history_df)):
@@ -191,6 +203,12 @@ def _build_row_split_window_bundles(
                 transformed_targets.append(
                     float(transform_target(np.array([built["target"]], dtype=np.float32), feature_cfg["target_transform"])[0])
                 )
+                anchor_temperature = float("nan")
+                if has_temperature_column:
+                    anchor_temperature = float(
+                        pd.to_numeric(raw_lake_history_df.iloc[anchor_index][temperature_column], errors="coerce")
+                    )
+                anchor_temperatures.append(anchor_temperature)
                 metadata_rows.append(
                     {
                         "window_id": f"{current_split}_{len(metadata_rows):06d}",
@@ -201,6 +219,7 @@ def _build_row_split_window_bundles(
                         "window_days": built["window_days"],
                         "target_raw": float(built["target"]),
                         "target_transformed": transformed_targets[-1],
+                        "anchor_temperature_celsius": anchor_temperature,
                     }
                 )
 
@@ -216,6 +235,7 @@ def _build_row_split_window_bundles(
             "windows": windows,
             "targets_raw": torch.tensor(targets, dtype=torch.float32),
             "targets_transformed": torch.tensor(transformed_targets, dtype=torch.float32),
+            "anchor_temperature_celsius": torch.tensor(anchor_temperatures, dtype=torch.float32),
             "metadata": metadata_rows,
             "feature_columns": feature_columns,
             "input_channels": [feature_cfg["time_channel_name"], *feature_columns],

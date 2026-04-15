@@ -16,7 +16,7 @@ from lakeice_ncde.data.datasets import Batch
 from lakeice_ncde.evaluation.predict import predict_loader
 from lakeice_ncde.training.checkpoints import load_checkpoint, save_checkpoint
 from lakeice_ncde.training.history import HistoryLogger
-from lakeice_ncde.training.losses import build_loss, check_loss_is_finite
+from lakeice_ncde.training.losses import build_loss, check_loss_is_finite, compute_physics_loss
 from lakeice_ncde.training.schedulers import build_scheduler
 from lakeice_ncde.utils.io import save_dataframe, save_json
 
@@ -47,6 +47,7 @@ class Trainer:
         self.device = self._resolve_device(config["train"]["device"])
         self.model.to(self.device)
         self.criterion = build_loss(config)
+        self.physics_loss_enabled = bool(config["train"].get("physics_loss", {}).get("enabled", False))
         self.optimizer = AdamW(
             self.model.parameters(),
             lr=float(config["train"]["learning_rate"]),
@@ -209,6 +210,9 @@ class Trainer:
                 "duration_seconds": duration_seconds,
                 "device": str(self.device),
                 "train_loss_name": self.config["train"]["loss"],
+                "physics_loss_enabled": bool(self.config["train"].get("physics_loss", {}).get("enabled", False)),
+                "physics_loss_rule": self.config["train"].get("physics_loss", {}).get("rule"),
+                "physics_loss_weight": self.config["train"].get("physics_loss", {}).get("weight"),
                 "interpolation": self.config["coeffs"]["interpolation"],
                 "window_days": self.config["window"]["window_days"],
                 "target_transform": target_transform,
@@ -238,7 +242,14 @@ class Trainer:
                 raise ValueError("Encountered a batch with no windows.")
             pred_tensor = self._predict_batch(batch)
             targets = batch.targets.to(self.device)
-            loss = self.criterion(pred_tensor, targets)
+            base_loss = self.criterion(pred_tensor, targets)
+            physics_loss = compute_physics_loss(
+                predictions_transformed=pred_tensor,
+                anchor_temperatures_celsius=batch.anchor_temperatures_celsius,
+                config=self.config,
+                target_transform=self.config["features"]["target_transform"],
+            )
+            loss = base_loss + physics_loss
             check_loss_is_finite(loss)
 
             if train:
@@ -252,16 +263,30 @@ class Trainer:
             batch_loss = float(loss.item())
             losses.append(batch_loss)
             running_loss = float(np.mean(losses))
-            self.logger.info(
-                "Epoch %d/%d | %s batch %d/%d | batch_loss=%.8f | running_loss=%.8f",
-                epoch,
-                max_epochs,
-                phase,
-                batch_index,
-                total_batches,
-                batch_loss,
-                running_loss,
-            )
+            if self.physics_loss_enabled:
+                self.logger.info(
+                    "Epoch %d/%d | %s batch %d/%d | batch_loss=%.8f | base_loss=%.8f | physics_loss=%.8f | running_loss=%.8f",
+                    epoch,
+                    max_epochs,
+                    phase,
+                    batch_index,
+                    total_batches,
+                    batch_loss,
+                    float(base_loss.item()),
+                    float(physics_loss.item()),
+                    running_loss,
+                )
+            else:
+                self.logger.info(
+                    "Epoch %d/%d | %s batch %d/%d | batch_loss=%.8f | running_loss=%.8f",
+                    epoch,
+                    max_epochs,
+                    phase,
+                    batch_index,
+                    total_batches,
+                    batch_loss,
+                    running_loss,
+                )
         return float(np.mean(losses))
 
     def _predict_batch(self, batch: Batch) -> torch.Tensor:

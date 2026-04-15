@@ -22,6 +22,10 @@ lakeice-ncde run --config configs/experiments/xiaoxingkai_transfer.yaml
   Uses the normalized `less60` dataset and tests on Xiaoxingkai.
 - `configs/experiments/xiaoxingkai_transfer_daily12.yaml`
   Same workflow, but the Xiaoxingkai test rows are restricted to 12:00 observations.
+- `configs/experiments/xiaoxingkai_transfer_daily12_history_autoreg.yaml`
+  Adds lagged ice-history features and seasonal autoregressive rollout evaluation.
+- `configs/experiments/xiaoxingkai_transfer_daily12_history_autoreg_physics.yaml`
+  Same as the history-autoregressive setting, but adds a physics loss: when air temperature is above 0C, predicted ice is penalized toward zero.
 
 ## Workflow
 

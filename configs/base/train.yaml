@@ -10,6 +10,12 @@ train:
   optimizer: "adamw"
   loss: "mse"
   huber_delta: 1.0
+  physics_loss:
+    enabled: false
+    rule: "no_ice_above_freezing"
+    weight: 1.0
+    threshold_celsius: 0.0
+    temperature_column: "Air_Temperature_celsius"
   device: "auto"
   early_stopping:
     patience: 15

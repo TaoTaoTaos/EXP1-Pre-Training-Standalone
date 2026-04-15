@@ -26,6 +26,7 @@ class Batch:
     targets: torch.Tensor
     targets_raw: torch.Tensor
     metadata: list[dict[str, Any]]
+    anchor_temperatures_celsius: torch.Tensor | None = None
 
 
 class CoeffDataset(Dataset):
@@ -38,6 +39,7 @@ class CoeffDataset(Dataset):
         self.targets = bundle["targets_transformed"].float()
         self.targets_raw = bundle["targets_raw"].float()
         self.metadata = bundle["metadata"]
+        self.anchor_temperatures_celsius = bundle.get("anchor_temperature_celsius")
         self.interpolation = bundle["interpolation"]
         self.input_channels = bundle["input_channels"]
         self.target_transform = bundle["target_transform"]
@@ -57,6 +59,9 @@ class CoeffDataset(Dataset):
             "target": self.targets[index],
             "target_raw": self.targets_raw[index],
             "metadata": self.metadata[index],
+            "anchor_temperature_celsius": None
+            if self.anchor_temperatures_celsius is None
+            else self.anchor_temperatures_celsius[index],
         }
 
 
@@ -83,6 +88,10 @@ def collate_coeff_batch(items: list[dict[str, Any]], batch_parallel: bool = Fals
     targets = torch.stack([item["target"] for item in items]).float()
     targets_raw = torch.stack([item["target_raw"] for item in items]).float()
     metadata = [item["metadata"] for item in items]
+    anchor_temperature_items = [item.get("anchor_temperature_celsius") for item in items]
+    anchor_temperatures_celsius = None
+    if all(value is not None for value in anchor_temperature_items):
+        anchor_temperatures_celsius = torch.stack(anchor_temperature_items).float()
     coeff_groups: list[CoeffGroup] = []
     if batch_parallel:
         grouped_indices: dict[tuple[Any, ...], list[int]] = {}
@@ -101,7 +110,14 @@ def collate_coeff_batch(items: list[dict[str, Any]], batch_parallel: bool = Fals
     else:
         for index, coeff in enumerate(coeffs):
             coeff_groups.append(CoeffGroup(indices=torch.tensor([index], dtype=torch.long), coeffs=coeff))
-    return Batch(coeffs=coeffs, coeff_groups=coeff_groups, targets=targets, targets_raw=targets_raw, metadata=metadata)
+    return Batch(
+        coeffs=coeffs,
+        coeff_groups=coeff_groups,
+        targets=targets,
+        targets_raw=targets_raw,
+        metadata=metadata,
+        anchor_temperatures_celsius=anchor_temperatures_celsius,
+    )
 
 
 def create_dataloader(
