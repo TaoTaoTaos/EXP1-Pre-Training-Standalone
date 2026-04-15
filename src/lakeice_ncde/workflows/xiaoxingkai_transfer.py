@@ -136,12 +136,19 @@ def _build_row_split_window_bundles(
     target_column = data_cfg["target_column"]
     feature_columns = feature_cfg["feature_columns"]
     physics_cfg = config["train"].get("physics_loss", {})
-    temperature_column = str(physics_cfg.get("temperature_column", "Air_Temperature_celsius"))
-    has_temperature_column = temperature_column in fold_df.columns
-    if physics_cfg.get("enabled", False) and not has_temperature_column:
-        raise ValueError(
-            f"Physics loss requires temperature column '{temperature_column}', but it is missing from the prepared data."
-        )
+    physics_field_columns = {
+        "ice_prev_m": str(physics_cfg.get("prev_ice_column", "ice_prev_m")),
+        "ice_prev_gap_days": str(physics_cfg.get("gap_days_column", "ice_prev_gap_days")),
+        "Air_Temperature_celsius": str(physics_cfg.get("temperature_column", "Air_Temperature_celsius")),
+        "ice_prev_available": str(physics_cfg.get("prev_available_column", "ice_prev_available")),
+    }
+    if physics_cfg.get("enabled", False):
+        missing_columns = [column for column in physics_field_columns.values() if column not in fold_df.columns]
+        if missing_columns:
+            raise ValueError(
+                "Physics loss requires the following prepared-data columns, but they are missing: "
+                f"{missing_columns}"
+            )
 
     train_rows = fold_df.loc[fold_df["row_split"] == "train"].copy()
     scaler = fit_feature_scaler(
@@ -170,7 +177,7 @@ def _build_row_split_window_bundles(
         windows: list[torch.Tensor] = []
         targets: list[float] = []
         transformed_targets: list[float] = []
-        anchor_temperatures: list[float] = []
+        physics_rows: dict[str, list[float]] = {field_name: [] for field_name in physics_field_columns}
         metadata_rows: list[dict[str, Any]] = []
 
         lake_groups = list(anchor_df.groupby(lake_column))
@@ -203,12 +210,14 @@ def _build_row_split_window_bundles(
                 transformed_targets.append(
                     float(transform_target(np.array([built["target"]], dtype=np.float32), feature_cfg["target_transform"])[0])
                 )
-                anchor_temperature = float("nan")
-                if has_temperature_column:
-                    anchor_temperature = float(
-                        pd.to_numeric(raw_lake_history_df.iloc[anchor_index][temperature_column], errors="coerce")
+                physics_values = {
+                    field_name: float(
+                        pd.to_numeric(raw_lake_history_df.iloc[anchor_index][column_name], errors="coerce")
                     )
-                anchor_temperatures.append(anchor_temperature)
+                    for field_name, column_name in physics_field_columns.items()
+                }
+                for field_name, field_value in physics_values.items():
+                    physics_rows[field_name].append(field_value)
                 metadata_rows.append(
                     {
                         "window_id": f"{current_split}_{len(metadata_rows):06d}",
@@ -219,7 +228,7 @@ def _build_row_split_window_bundles(
                         "window_days": built["window_days"],
                         "target_raw": float(built["target"]),
                         "target_transformed": transformed_targets[-1],
-                        "anchor_temperature_celsius": anchor_temperature,
+                        **{field_name: field_value for field_name, field_value in physics_values.items()},
                     }
                 )
 
@@ -235,7 +244,9 @@ def _build_row_split_window_bundles(
             "windows": windows,
             "targets_raw": torch.tensor(targets, dtype=torch.float32),
             "targets_transformed": torch.tensor(transformed_targets, dtype=torch.float32),
-            "anchor_temperature_celsius": torch.tensor(anchor_temperatures, dtype=torch.float32),
+            "physics_context": {
+                field_name: torch.tensor(values, dtype=torch.float32) for field_name, values in physics_rows.items()
+            },
             "metadata": metadata_rows,
             "feature_columns": feature_columns,
             "input_channels": [feature_cfg["time_channel_name"], *feature_columns],

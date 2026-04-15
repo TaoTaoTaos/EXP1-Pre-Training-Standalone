@@ -25,7 +25,7 @@ lakeice-ncde run --config configs/experiments/xiaoxingkai_transfer.yaml
 - `configs/experiments/xiaoxingkai_transfer_daily12_history_autoreg.yaml`
   Adds lagged ice-history features and seasonal autoregressive rollout evaluation.
 - `configs/experiments/xiaoxingkai_transfer_daily12_history_autoreg_physics.yaml`
-  Same as the history-autoregressive setting, but adds a physics loss: when air temperature is above 0C, predicted ice is penalized toward zero.
+  Same as the history-autoregressive setting, but adds a Stefan-style physics loss using previous ice thickness, sub-freezing degree-days, and a learnable `kappa`.
 
 ## Workflow
 

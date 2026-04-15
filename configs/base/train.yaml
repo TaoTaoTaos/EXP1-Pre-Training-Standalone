@@ -12,10 +12,16 @@ train:
   huber_delta: 1.0
   physics_loss:
     enabled: false
-    rule: "no_ice_above_freezing"
-    weight: 1.0
-    threshold_celsius: 0.0
+    rule: "stefan_growth_residual"
+    lambda_st: 1.0
+    lambda_nn: 1.0
+    init_kappa: 1.0
+    min_prev_ice_m: 1.0e-3
+    grow_temp_threshold_celsius: -0.5
+    prev_ice_column: "ice_prev_m"
+    gap_days_column: "ice_prev_gap_days"
     temperature_column: "Air_Temperature_celsius"
+    prev_available_column: "ice_prev_available"
   device: "auto"
   early_stopping:
     patience: 15

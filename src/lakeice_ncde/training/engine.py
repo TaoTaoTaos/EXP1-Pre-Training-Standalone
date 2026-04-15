@@ -9,6 +9,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import torch
+from torch import nn
 from torch.optim import AdamW
 from torch.utils.data import DataLoader
 
@@ -16,7 +17,12 @@ from lakeice_ncde.data.datasets import Batch
 from lakeice_ncde.evaluation.predict import predict_loader
 from lakeice_ncde.training.checkpoints import load_checkpoint, save_checkpoint
 from lakeice_ncde.training.history import HistoryLogger
-from lakeice_ncde.training.losses import build_loss, check_loss_is_finite, compute_physics_loss
+from lakeice_ncde.training.losses import (
+    build_loss,
+    check_loss_is_finite,
+    compute_physics_loss,
+    inverse_softplus,
+)
 from lakeice_ncde.training.schedulers import build_scheduler
 from lakeice_ncde.utils.io import save_dataframe, save_json
 
@@ -48,8 +54,14 @@ class Trainer:
         self.model.to(self.device)
         self.criterion = build_loss(config)
         self.physics_loss_enabled = bool(config["train"].get("physics_loss", {}).get("enabled", False))
+        self.theta_kappa: nn.Parameter | None = None
+        optimizer_parameters = list(self.model.parameters())
+        if self.physics_loss_enabled:
+            init_kappa = float(config["train"]["physics_loss"].get("init_kappa", 1.0))
+            self.theta_kappa = nn.Parameter(torch.tensor(inverse_softplus(init_kappa), dtype=torch.float32, device=self.device))
+            optimizer_parameters.append(self.theta_kappa)
         self.optimizer = AdamW(
-            self.model.parameters(),
+            optimizer_parameters,
             lr=float(config["train"]["learning_rate"]),
             weight_decay=float(config["train"]["weight_decay"]),
         )
@@ -212,7 +224,9 @@ class Trainer:
                 "train_loss_name": self.config["train"]["loss"],
                 "physics_loss_enabled": bool(self.config["train"].get("physics_loss", {}).get("enabled", False)),
                 "physics_loss_rule": self.config["train"].get("physics_loss", {}).get("rule"),
-                "physics_loss_weight": self.config["train"].get("physics_loss", {}).get("weight"),
+                "physics_lambda_st": self.config["train"].get("physics_loss", {}).get("lambda_st"),
+                "physics_lambda_nn": self.config["train"].get("physics_loss", {}).get("lambda_nn"),
+                "physics_kappa": None if self.theta_kappa is None else float(torch.nn.functional.softplus(self.theta_kappa).item()),
                 "interpolation": self.config["coeffs"]["interpolation"],
                 "window_days": self.config["window"]["window_days"],
                 "target_transform": target_transform,
@@ -243,13 +257,14 @@ class Trainer:
             pred_tensor = self._predict_batch(batch)
             targets = batch.targets.to(self.device)
             base_loss = self.criterion(pred_tensor, targets)
-            physics_loss = compute_physics_loss(
+            physics_breakdown = compute_physics_loss(
                 predictions_transformed=pred_tensor,
-                anchor_temperatures_celsius=batch.anchor_temperatures_celsius,
+                physics_context=batch.physics_context,
                 config=self.config,
                 target_transform=self.config["features"]["target_transform"],
+                theta_kappa=self.theta_kappa,
             )
-            loss = base_loss + physics_loss
+            loss = base_loss + physics_breakdown.total
             check_loss_is_finite(loss)
 
             if train:
@@ -265,7 +280,7 @@ class Trainer:
             running_loss = float(np.mean(losses))
             if self.physics_loss_enabled:
                 self.logger.info(
-                    "Epoch %d/%d | %s batch %d/%d | batch_loss=%.8f | base_loss=%.8f | physics_loss=%.8f | running_loss=%.8f",
+                    "Epoch %d/%d | %s batch %d/%d | batch_loss=%.8f | base_loss=%.8f | loss_stefan=%.8f | loss_nonneg=%.8f | physics_total=%.8f | kappa=%.8f | running_loss=%.8f",
                     epoch,
                     max_epochs,
                     phase,
@@ -273,7 +288,10 @@ class Trainer:
                     total_batches,
                     batch_loss,
                     float(base_loss.item()),
-                    float(physics_loss.item()),
+                    float(physics_breakdown.stefan.item()),
+                    float(physics_breakdown.nonneg.item()),
+                    float(physics_breakdown.total.item()),
+                    float(physics_breakdown.kappa.item()),
                     running_loss,
                 )
             else:
