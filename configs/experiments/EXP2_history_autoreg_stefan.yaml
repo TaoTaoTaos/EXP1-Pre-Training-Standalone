@@ -1,0 +1,36 @@
+# EXP2：在 EXP1 基础上增加 Stefan 物理损失
+# 除实验名、输出路径和 physics_loss 外，其余超参数全部沿用 EXP1。
+
+extends: "EXP1_history_autoreg.yaml"
+
+experiment:
+  name: "EXP2_history_autoreg_stefan"
+  description: "实验2：在实验1基础上加入 Stefan 风格物理损失。"
+
+paths:
+  # 与 EXP1 分开存放，避免产物覆盖
+  prepared_csv: "data/interim/prepared_data_EXP2_history_autoreg_stefan.csv"
+  validation_report_json: "data/artifacts/EXP2_history_autoreg_stefan_validation_report.json"
+  feature_schema_json: "data/artifacts/EXP2_history_autoreg_stefan_feature_schema.json"
+  split_root: "data/splits_EXP2_history_autoreg_stefan"
+  window_root: "data/windows_EXP2_history_autoreg_stefan"
+  coeff_root: "data/coeffs_EXP2_history_autoreg_stefan"
+  artifact_root: "data/artifacts/EXP2_history_autoreg_stefan"
+
+split:
+  name: "EXP2_history_autoreg_stefan_reference"
+
+train:
+  # EXP2 相比 EXP1 的唯一核心差异：启用 Stefan 物理损失
+  physics_loss:
+    enabled: true
+    rule: "stefan_growth_residual"
+    lambda_st: 0.01
+    lambda_nn: 1.0
+    init_kappa: 0.0096
+    min_prev_ice_m: 1.0e-3
+    grow_temp_threshold_celsius: -0.5
+    prev_ice_column: "ice_prev_m"
+    gap_days_column: "ice_prev_gap_days"
+    temperature_column: "Air_Temperature_celsius"
+    prev_available_column: "ice_prev_available"

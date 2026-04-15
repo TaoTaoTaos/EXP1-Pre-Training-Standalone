@@ -38,6 +38,33 @@ def load_yaml(path: Path) -> dict[str, Any]:
         return yaml.safe_load(handle) or {}
 
 
+def load_yaml_with_extends(path: Path, loading_stack: tuple[Path, ...] = ()) -> dict[str, Any]:
+    """Load a YAML file and recursively merge any parent configs declared via extends."""
+    resolved_path = path.resolve()
+    if resolved_path in loading_stack:
+        chain = " -> ".join(str(item) for item in (*loading_stack, resolved_path))
+        raise ValueError(f"Detected cyclic config extends chain: {chain}")
+
+    data = load_yaml(resolved_path)
+    extends = data.pop("extends", None)
+    if extends is None:
+        return data
+
+    if isinstance(extends, (str, Path)):
+        extend_entries = [extends]
+    elif isinstance(extends, list):
+        extend_entries = extends
+    else:
+        raise TypeError(f"Config 'extends' must be a string or list, got {type(extends).__name__}.")
+
+    merged: dict[str, Any] = {}
+    next_stack = (*loading_stack, resolved_path)
+    for entry in extend_entries:
+        parent_path = (resolved_path.parent / Path(entry)).resolve()
+        merged = deep_merge(merged, load_yaml_with_extends(parent_path, next_stack))
+    return deep_merge(merged, data)
+
+
 def save_yaml(data: dict[str, Any], path: Path) -> None:
     """Save a dictionary to YAML."""
     with path.open("w", encoding="utf-8") as handle:
@@ -59,10 +86,10 @@ def load_config(
     base_dir = project_root / "configs" / "base"
     config: dict[str, Any] = {}
     for name in BASE_CONFIG_ORDER:
-        config = deep_merge(config, load_yaml(base_dir / name))
-    config = deep_merge(config, load_yaml(config_path))
+        config = deep_merge(config, load_yaml_with_extends(base_dir / name))
+    config = deep_merge(config, load_yaml_with_extends(config_path))
     for override_path in override_paths or []:
-        config = deep_merge(config, load_yaml(override_path))
+        config = deep_merge(config, load_yaml_with_extends(override_path))
     config["runtime"] = {
         "project_root": str(project_root),
         "config_path": str(config_path),

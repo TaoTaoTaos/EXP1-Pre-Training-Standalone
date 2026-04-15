@@ -102,7 +102,7 @@ def _build_cover_section(report_data: dict[str, Any], styles) -> list[Any]:
     diagnostics = report_data["diagnostics"]
 
     story: list[Any] = [
-        Paragraph("Xiaoxingkai Transfer Result Report", styles["ReportTitle"]),
+        Paragraph(f"{report_data['experiment_name']} Result Report", styles["ReportTitle"]),
         Paragraph(
             f"Run directory: {report_data['run_dir']}<br/>"
             f"Experiment: {report_data['experiment_name']}<br/>"
@@ -154,7 +154,7 @@ def _build_cover_section(report_data: dict[str, Any], styles) -> list[Any]:
         f"Best epoch: {summary['best_epoch']}",
         f"Observed evaluation mean/std: {diagnostics['eval_true_mean']:.4f} / {diagnostics['eval_true_std']:.4f}",
         f"Predicted evaluation mean/std: {diagnostics['eval_pred_mean']:.4f} / {diagnostics['eval_pred_std']:.4f}",
-        f"Validation windows: {diagnostics['val_window_count']} | Test windows: {diagnostics['test_window_count']}",
+        f"Validation windows: {diagnostics['val_window_count']} | Seasonal-rollout test points: {diagnostics['test_window_count']}",
         "Interpretation: if predicted std is much smaller than observed std, the model is behaving too conservatively and is under-expressing peak-to-trough variation.",
     ]
     for line in diagnostic_lines:
@@ -164,6 +164,7 @@ def _build_cover_section(report_data: dict[str, Any], styles) -> list[Any]:
 
 def _build_setup_section(report_data: dict[str, Any], styles) -> list[Any]:
     config = report_data["config"]
+    run_summary = report_data["run_summary"]
     feature_columns = [config["features"]["time_channel_name"], *config["features"]["feature_columns"]]
 
     story: list[Any] = [
@@ -205,6 +206,26 @@ def _build_setup_section(report_data: dict[str, Any], styles) -> list[Any]:
         ["custom_split.target_lake_test_start", str(config["custom_split"].get("target_lake_test_start", "none"))],
     ]
     story.append(_styled_table(config_rows, col_widths=[3.2, 4.2]))
+
+    physics_cfg = config["train"].get("physics_loss", {})
+    if physics_cfg.get("enabled", False):
+        story.append(Spacer(1, 10))
+        story.append(Paragraph("Physics Loss Configuration", styles["Heading3"]))
+        physics_rows = [
+            ["Field", "Value"],
+            ["train.physics_loss.rule", str(physics_cfg.get("rule", "none"))],
+            ["train.physics_loss.lambda_st", str(physics_cfg.get("lambda_st", "n/a"))],
+            ["train.physics_loss.lambda_nn", str(physics_cfg.get("lambda_nn", "n/a"))],
+            ["train.physics_loss.init_kappa", str(physics_cfg.get("init_kappa", "n/a"))],
+            ["run_summary.physics_kappa", str(run_summary.get("physics_kappa", "n/a"))],
+            ["train.physics_loss.min_prev_ice_m", str(physics_cfg.get("min_prev_ice_m", "n/a"))],
+            ["train.physics_loss.grow_temp_threshold_celsius", str(physics_cfg.get("grow_temp_threshold_celsius", "n/a"))],
+            ["train.physics_loss.prev_ice_column", str(physics_cfg.get("prev_ice_column", "n/a"))],
+            ["train.physics_loss.gap_days_column", str(physics_cfg.get("gap_days_column", "n/a"))],
+            ["train.physics_loss.temperature_column", str(physics_cfg.get("temperature_column", "n/a"))],
+            ["train.physics_loss.prev_available_column", str(physics_cfg.get("prev_available_column", "n/a"))],
+        ]
+        story.append(_styled_table(physics_rows, col_widths=[3.2, 4.2]))
     return story
 
 
@@ -216,14 +237,14 @@ def _build_data_selection_section(report_data: dict[str, Any], styles) -> list[A
     story: list[Any] = [
         Paragraph("1. Source-Lake Selection, Windowing, And Balance Effects", styles["SectionHeading"]),
         Paragraph(
-            f"Each source lake is first split by time into train/val. The target lake {_safe_lake_label(report_data['target_lake_label'])} is split so that rows before the cutoff are further divided into train/val, while rows from the cutoff onward are reserved for test. A row only becomes a valid window if there are at least two observations inside the {report_data['config']['window']['window_days']}-day lookback. After that, train and val windows are capped per lake for balance.",
+            f"Each source lake is first split by time into train/val. The target lake {_safe_lake_label(report_data['target_lake_label'])} is split so that rows before the cutoff are further divided into train/val, while rows from the cutoff onward are withheld from training and only used later as observation checkpoints for seasonal-rollout testing. A row only becomes a valid training or validation window if there are at least two observations inside the {report_data['config']['window']['window_days']}-day lookback. After that, train and val windows are capped per lake for balance.",
             styles["BodyText"],
         ),
         Spacer(1, 8),
         Paragraph("Row Assignment Counts From The Source File", styles["Heading3"]),
     ]
 
-    row_table = [["Lake", "Rows In Source", "Train Rows", "Val Rows", "Test Rows"]]
+    row_table = [["Lake", "Rows In Source", "Train Rows", "Val Rows", "Withheld Test Rows"]]
     for _, row in row_stats.iterrows():
         row_table.append(
             [
@@ -245,7 +266,6 @@ def _build_data_selection_section(report_data: dict[str, Any], styles) -> list[A
             "Train Kept",
             "Val Valid",
             "Val Kept",
-            "Test Windows",
             "Median Points",
         ]
     ]
@@ -257,11 +277,10 @@ def _build_data_selection_section(report_data: dict[str, Any], styles) -> list[A
                 str(int(row["train_post_balance"])),
                 str(int(row["val_pre_balance"])),
                 str(int(row["val_post_balance"])),
-                str(int(row["test_post_balance"])),
                 f"{row['median_window_points']:.1f}",
             ]
         )
-    story.append(_styled_table(window_table, col_widths=[3.0, 1.0, 0.9, 1.0, 0.9, 0.9, 1.0], font_size=8.5))
+    story.append(_styled_table(window_table, col_widths=[3.2, 1.0, 0.9, 1.0, 0.9, 1.0], font_size=8.5))
     story.append(Spacer(1, 10))
 
     story.append(Paragraph("Total Counts", styles["Heading3"]))
@@ -270,7 +289,7 @@ def _build_data_selection_section(report_data: dict[str, Any], styles) -> list[A
         f"Total train rows / val rows / test rows: {totals['train_rows']} / {totals['val_rows']} / {totals['test_rows']}",
         f"Total train windows before/after balance: {totals['train_pre_balance']} / {totals['train_post_balance']}",
         f"Total val windows before/after balance: {totals['val_pre_balance']} / {totals['val_post_balance']}",
-        f"Total test windows: {totals['test_post_balance']}",
+        "Held-out target rows are evaluated only through seasonal-rollout overlap, not as standalone test windows.",
     ]
     for line in total_lines:
         story.append(Paragraph(line, styles["BodySmall"]))
@@ -294,7 +313,7 @@ def _build_figures_section(report_data: dict[str, Any], styles) -> list[Any]:
 
     for title, fig in figures:
         story.append(Paragraph(title, styles["Heading3"]))
-        story.append(_figure_to_reportlab_image(fig, width=9.6 * inch))
+        story.append(_figure_to_reportlab_image(fig, max_width=9.6 * inch))
         story.append(Spacer(1, 8))
     return story
 
@@ -308,7 +327,7 @@ def _build_seasonal_rollout_section(report_data: dict[str, Any], styles) -> list
     story: list[Any] = [
         Paragraph("3. Seasonal Rollout Test", styles["SectionHeading"]),
         Paragraph(
-            "This second test reuses the same trained model, but drives it with Xiaoxingkai daily 12:00 ERA5 from the continuous hourly archive. It answers whether the model can follow the full ice-season evolution when given uninterrupted meteorological forcing rather than only the held-out observation rows.",
+            "The only test in this report is the autoregressive seasonal rollout. Starting from the configured test start date, the model is driven day by day with Xiaoxingkai 12:00 ERA5 forcing and keeps feeding its previous predicted ice thickness into the next step. Because of that, an earlier test start creates a longer accumulated trajectory, and the model behavior at the January 2026 observation period can change with the chosen start date.",
             styles["BodyText"],
         ),
         Spacer(1, 8),
@@ -322,22 +341,43 @@ def _build_seasonal_rollout_section(report_data: dict[str, Any], styles) -> list
                 metric_rows.append([key, f"{value:.4f}" if isinstance(value, (int, float)) and key != "count" else str(value)])
     metric_rows.extend(
         [
+            ["test_method", "seasonal_rollout_overlap"],
+            ["test_start_datetime", str(overlap_metrics.get("test_start_datetime"))],
             ["rollout_rows", str(int(len(seasonal_df)))],
             ["overlap_rows", str(int(len(overlap_df)))],
             ["start_datetime", str(seasonal_df["sample_datetime"].min())],
             ["end_datetime", str(seasonal_df["sample_datetime"].max())],
+            ["observed_overlap_start", str(overlap_metrics.get("overlap_start_datetime"))],
+            ["observed_overlap_end", str(overlap_metrics.get("overlap_end_datetime"))],
         ]
     )
     story.append(_styled_table(metric_rows, col_widths=[2.8, 3.6]))
     story.append(Spacer(1, 10))
 
     story.append(Paragraph("Seasonal rollout time series", styles["Heading3"]))
-    story.append(_figure_to_reportlab_image(create_lake_timeseries_figure(seasonal_df, target_lake), width=9.6 * inch))
+    story.append(_figure_to_reportlab_image(create_lake_timeseries_figure(seasonal_df, target_lake), max_width=9.6 * inch))
     story.append(Spacer(1, 8))
 
     if not overlap_df.empty:
+        observed_start = overlap_df["sample_datetime"].min()
+        observed_end = overlap_df["sample_datetime"].max()
+        story.append(Paragraph("Seasonal rollout focus on observed date range", styles["Heading3"]))
+        story.append(
+            _figure_to_reportlab_image(
+                create_lake_timeseries_figure(
+                    seasonal_df,
+                    target_lake,
+                    start_datetime=observed_start,
+                    end_datetime=observed_end,
+                    title="Seasonal Rollout Focus On Observed Date Range",
+                ),
+                max_width=9.6 * inch,
+            )
+        )
+        story.append(Spacer(1, 8))
+
         story.append(Paragraph("Seasonal rollout overlap: predicted vs observed", styles["Heading3"]))
-        story.append(_figure_to_reportlab_image(create_pred_vs_obs_figure(overlap_df), width=6.8 * inch))
+        story.append(_figure_to_reportlab_image(create_pred_vs_obs_figure(overlap_df), max_width=6.8 * inch))
         story.append(Spacer(1, 8))
     return story
 
@@ -582,16 +622,24 @@ def _compute_totals(row_stats: pd.DataFrame, window_stats: pd.DataFrame) -> dict
     }
 
 
-def _figure_to_reportlab_image(fig, width: float) -> Image:
+def _figure_to_reportlab_image(fig, max_width: float, max_height: float = 4.8 * inch) -> Image:
     import matplotlib.pyplot as plt
+
+    fig_width_inches, fig_height_inches = fig.get_size_inches()
+    if fig_width_inches <= 0 or fig_height_inches <= 0:
+        fig_width_inches, fig_height_inches = 1.0, 1.0
 
     buffer = BytesIO()
     fig.savefig(buffer, format="png", dpi=220, bbox_inches="tight")
     plt.close(fig)
     buffer.seek(0)
     image = Image(buffer)
-    image.drawWidth = width
-    image.drawHeight = width * 0.58
+
+    width_scale = max_width / float(fig_width_inches * inch)
+    height_scale = max_height / float(fig_height_inches * inch)
+    scale = min(width_scale, height_scale)
+    image.drawWidth = float(fig_width_inches * inch) * scale
+    image.drawHeight = float(fig_height_inches * inch) * scale
     return image
 
 

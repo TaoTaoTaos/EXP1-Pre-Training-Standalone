@@ -125,14 +125,7 @@ class Trainer:
                 val_metrics["r2"],
             )
 
-            checkpoint_state = {
-                "epoch": epoch,
-                "model_state_dict": self.model.state_dict(),
-                "optimizer_state_dict": self.optimizer.state_dict(),
-                "config": self.config,
-                "best_metric": self.best_metric,
-            }
-            save_checkpoint(latest_ckpt_path, checkpoint_state)
+            checkpoint_state = self._build_checkpoint_state(epoch)
 
             current_metric = val_metrics["rmse"]
             min_delta = float(self.config["train"]["early_stopping"]["min_delta"])
@@ -140,11 +133,14 @@ class Trainer:
                 self.best_metric = current_metric
                 self.best_epoch = epoch
                 self.bad_epochs = 0
+                checkpoint_state["best_metric"] = self.best_metric
                 self.best_state = copy.deepcopy(checkpoint_state)
                 save_checkpoint(best_ckpt_path, self.best_state)
                 save_dataframe(val_predictions, self.run_dir / "val_predictions.csv")
             else:
                 self.bad_epochs += 1
+
+            save_checkpoint(latest_ckpt_path, checkpoint_state)
 
             if self.scheduler is not None:
                 if self.config["train"]["scheduler"]["name"] == "reduce_on_plateau":
@@ -161,7 +157,7 @@ class Trainer:
             raise RuntimeError("Training finished without producing a best checkpoint.")
 
         best_checkpoint = load_checkpoint(best_ckpt_path, map_location=self.device)
-        self.model.load_state_dict(best_checkpoint["model_state_dict"])
+        self._restore_checkpoint_state(best_checkpoint)
 
         val_predictions, val_metrics = predict_loader(
             model=self.model,
@@ -169,6 +165,7 @@ class Trainer:
             device=self.device,
             target_transform=target_transform,
         )
+        val_loss = float(np.mean(np.square(val_predictions["y_pred"] - val_predictions["y_true"])))
         save_dataframe(val_predictions, self.run_dir / "val_predictions.csv")
 
         if test_loader is not None:
@@ -245,6 +242,26 @@ class Trainer:
             per_lake_metrics_path=per_lake_metrics_path,
             run_summary_path=run_summary_path,
         )
+
+    def _build_checkpoint_state(self, epoch: int) -> dict[str, Any]:
+        """Build a checkpoint payload including physics-only trainable state."""
+        return {
+            "epoch": epoch,
+            "model_state_dict": self.model.state_dict(),
+            "optimizer_state_dict": self.optimizer.state_dict(),
+            "config": self.config,
+            "best_metric": self.best_metric,
+            "theta_kappa_state": None if self.theta_kappa is None else self.theta_kappa.detach().cpu().clone(),
+        }
+
+    def _restore_checkpoint_state(self, checkpoint: dict[str, Any]) -> None:
+        """Restore the model and any extra trainable physics parameters from a checkpoint."""
+        self.model.load_state_dict(checkpoint["model_state_dict"])
+        theta_kappa_state = checkpoint.get("theta_kappa_state")
+        if self.theta_kappa is None or theta_kappa_state is None:
+            return
+        with torch.no_grad():
+            self.theta_kappa.copy_(theta_kappa_state.to(self.device))
 
     def _run_epoch(self, loader: DataLoader, train: bool, epoch: int, max_epochs: int) -> float:
         self.model.train(mode=train)

@@ -22,11 +22,11 @@ features:
     - "Ten_Meter_Elevation_Wind_Speed_meterPerSecond"
     - "Air_Temperature_celsius"
     - "Relative_Humidity_percent"
-    - "Shortwave_Radiation_Downwelling_wattPerMeterSquared"
-    - "Longwave_Radiation_Downwelling_wattPerMeterSquared"
+   # - "Shortwave_Radiation_Downwelling_wattPerMeterSquared"
+   # - "Longwave_Radiation_Downwelling_wattPerMeterSquared"
     - "Sea_Level_Barometric_Pressure_pascal"
     - "Surface_Level_Barometric_Pressure_pascal"
-    - "Precipitation_millimeterPerDay"
+   # - "Precipitation_millimeterPerDay"
     - "Snowfall_millimeterPerDay"
     - "ice_prev_m"
     - "ice_prev_gap_days"
@@ -54,35 +54,35 @@ seasonal_rollout:
   autoregressive_history: true
   target_lake_name: "Xiaoxingkai"
   era5_csv: "data/raw/XXKH-St-UTC+8-ERA5-1980-202603-noNA.csv"
-  start_datetime: "2025-10-01 12:00:00"
-  end_datetime: "2026-03-31 12:00:00"
+  test_start_datetime: "2025-10-01 12:00:00"
+  end_datetime: "2026-02-22 12:00:00"
   daily_hour: 12
 
 window:
   window_days: 7
 
 model:
-  hidden_channels: 48
-  hidden_hidden_channels: 96
-  num_hidden_layers: 3
-  dropout: 0.1
+  hidden_channels: 55
+  hidden_hidden_channels: 110
+  num_hidden_layers: 5
+  dropout: 0.05
   method: "rk4"
 
 train:
-  batch_size: 32
+  batch_size: 16
   batch_parallel: true
   learning_rate: 2.0e-4
   weight_decay: 5.0e-4
-  max_epochs: 120
+  max_epochs: 300
   gradient_clip_norm: 0.5
   loss: "huber"
   huber_delta: 0.1
   physics_loss:
     enabled: true
     rule: "stefan_growth_residual"
-    lambda_st: 1.0
-    lambda_nn: 1.0
-    init_kappa: 1.0
+    lambda_st: 0.008
+    lambda_nn: 1
+    init_kappa: 0.00096
     min_prev_ice_m: 1.0e-3
     grow_temp_threshold_celsius: -0.5
     prev_ice_column: "ice_prev_m"

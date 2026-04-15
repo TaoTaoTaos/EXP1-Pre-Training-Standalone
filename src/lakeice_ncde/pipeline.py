@@ -331,14 +331,9 @@ def evaluate_run(run_dir: Path, logger) -> dict[str, Any]:
 
 def plot_from_run(run_dir: Path, logger) -> None:
     """Generate the consolidated PDF report for a run."""
-    figures_dir = run_dir / "figures"
-    figures_dir.mkdir(parents=True, exist_ok=True)
-
-    for png_path in figures_dir.glob("*.png"):
-        png_path.unlink(missing_ok=True)
-
-    build_pdf_report(run_dir, figures_dir / "report.pdf")
-    logger.info("PDF report saved to %s", figures_dir / "report.pdf")
+    pdf_path = run_dir / f"{run_dir.name}.pdf"
+    build_pdf_report(run_dir, pdf_path)
+    logger.info("PDF report saved to %s", pdf_path)
 
 
 def _read_yaml(path: Path) -> dict[str, Any]:

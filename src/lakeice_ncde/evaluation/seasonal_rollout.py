@@ -19,6 +19,7 @@ from lakeice_ncde.utils.io import save_dataframe, save_json
 @dataclass(frozen=True)
 class SeasonalRolloutArtifacts:
     predictions_path: Path
+    overlap_predictions_path: Path
     overlap_metrics_path: Path
     overlap_metrics_json_path: Path
     window_path: Path
@@ -77,16 +78,41 @@ def run_seasonal_rollout(
     save_dataframe(predictions_df, predictions_path)
 
     overlap_df = predictions_df.loc[predictions_df["y_true"].notna()].copy()
+    overlap_predictions_path = run_dir / "seasonal_rollout_overlap_predictions.csv"
+    save_dataframe(overlap_df, overlap_predictions_path)
+    test_start = _resolve_rollout_test_start(rollout_cfg)
+    full_start = None if predictions_df.empty else pd.Timestamp(predictions_df["sample_datetime"].min())
+    full_end = None if predictions_df.empty else pd.Timestamp(predictions_df["sample_datetime"].max())
+    overlap_start = None if overlap_df.empty else pd.Timestamp(overlap_df["sample_datetime"].min())
+    overlap_end = None if overlap_df.empty else pd.Timestamp(overlap_df["sample_datetime"].max())
     if overlap_df.empty:
-        overlap_metrics = {"count": 0}
+        overlap_metrics = {
+            "count": 0,
+            "rollout_rows": int(len(predictions_df)),
+            "test_start_datetime": str(test_start),
+            "rollout_start_datetime": None if full_start is None else str(full_start),
+            "rollout_end_datetime": None if full_end is None else str(full_end),
+            "overlap_start_datetime": None,
+            "overlap_end_datetime": None,
+        }
     else:
-        overlap_metrics = {"count": int(len(overlap_df)), **compute_regression_metrics(overlap_df["y_true"].to_numpy(), overlap_df["y_pred"].to_numpy())}
+        overlap_metrics = {
+            "count": int(len(overlap_df)),
+            "rollout_rows": int(len(predictions_df)),
+            "test_start_datetime": str(test_start),
+            "rollout_start_datetime": None if full_start is None else str(full_start),
+            "rollout_end_datetime": None if full_end is None else str(full_end),
+            "overlap_start_datetime": None if overlap_start is None else str(overlap_start),
+            "overlap_end_datetime": None if overlap_end is None else str(overlap_end),
+            **compute_regression_metrics(overlap_df["y_true"].to_numpy(), overlap_df["y_pred"].to_numpy()),
+        }
     overlap_metrics_path = run_dir / "seasonal_rollout_overlap_metrics.csv"
     overlap_metrics_json_path = run_dir / "seasonal_rollout_overlap_metrics.json"
     save_dataframe(pd.DataFrame([overlap_metrics]), overlap_metrics_path)
     save_json(overlap_metrics, overlap_metrics_json_path)
     return SeasonalRolloutArtifacts(
         predictions_path=predictions_path,
+        overlap_predictions_path=overlap_predictions_path,
         overlap_metrics_path=overlap_metrics_path,
         overlap_metrics_json_path=overlap_metrics_json_path,
         window_path=window_path,
@@ -100,11 +126,12 @@ def build_seasonal_rollout_dataframe(config: dict[str, Any], prepared_df: pd.Dat
     target_column = config["data"]["target_column"]
     lake_column = config["data"]["lake_column"]
 
-    era5_df = pd.read_csv(rollout_cfg["era5_csv"])
+    era5_csv_path = _resolve_rollout_path(config, rollout_cfg["era5_csv"])
+    era5_df = pd.read_csv(era5_csv_path)
     era5_df["datetime"] = pd.to_datetime(era5_df["datetime"])
     era5_df = era5_df.loc[era5_df["datetime"].dt.hour == int(rollout_cfg.get("daily_hour", 12))].copy()
 
-    start = pd.Timestamp(rollout_cfg["start_datetime"])
+    start = _resolve_rollout_test_start(rollout_cfg)
     end = pd.Timestamp(rollout_cfg["end_datetime"]) if rollout_cfg.get("end_datetime") else era5_df["datetime"].max()
     era5_df = era5_df.loc[(era5_df["datetime"] >= start) & (era5_df["datetime"] <= end)].copy()
 
@@ -464,3 +491,21 @@ def _move_coeff_to_device(coeff: Any, device: torch.device) -> Any:
     if isinstance(coeff, tuple):
         return tuple(component.to(device) for component in coeff)
     return coeff.to(device)
+
+
+def _resolve_rollout_path(config: dict[str, Any], raw_path: str) -> Path:
+    path = Path(raw_path)
+    if path.is_absolute():
+        return path
+    runtime = config.get("runtime", {})
+    project_root = runtime.get("project_root")
+    if project_root:
+        return (Path(project_root) / path).resolve()
+    return path.resolve()
+
+
+def _resolve_rollout_test_start(rollout_cfg: dict[str, Any]) -> pd.Timestamp:
+    raw_value = rollout_cfg.get("test_start_datetime", rollout_cfg.get("start_datetime"))
+    if raw_value is None:
+        raise ValueError("seasonal_rollout requires 'test_start_datetime' (or legacy 'start_datetime').")
+    return pd.Timestamp(raw_value)

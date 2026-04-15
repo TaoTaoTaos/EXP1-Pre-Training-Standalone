@@ -14,11 +14,12 @@ from lakeice_ncde.data.coeffs import compute_coefficients_for_windows, save_coef
 from lakeice_ncde.data.datasets import create_dataloader
 from lakeice_ncde.data.scaling import apply_feature_scaler, fit_feature_scaler, transform_target
 from lakeice_ncde.data.windowing import _build_single_window
+from lakeice_ncde.evaluation.per_lake_summary import compute_per_lake_metrics
 from lakeice_ncde.evaluation.seasonal_rollout import run_seasonal_rollout
 from lakeice_ncde.experiment.registry import append_experiment_registry
 from lakeice_ncde.experiment.tracker import create_run_context
 from lakeice_ncde.models.neural_cde import build_model
-from lakeice_ncde.pipeline import load_or_prepare_dataframe, plot_from_run
+from lakeice_ncde.pipeline import load_or_prepare_dataframe, plot_from_run, validate_and_save
 from lakeice_ncde.training.engine import Trainer
 from lakeice_ncde.utils.io import load_dataframe, save_dataframe, save_json, save_yaml
 from lakeice_ncde.utils.logging import setup_logging
@@ -165,7 +166,7 @@ def _build_row_split_window_bundles(
     save_yaml(scaler.to_dict(), scaler_path)
 
     bundle_paths: dict[str, Path] = {}
-    for current_split in ("train", "val", "test"):
+    for current_split in ("train", "val"):
         anchor_df = scaled_df.loc[scaled_df["row_split"] == current_split].copy()
         logger.info(
             "Building %s windows for split '%s': %d rows across %d lakes.",
@@ -299,6 +300,12 @@ def _subsample_bundle_by_lake(bundle_path: Path, max_windows_per_lake: int, seed
     bundle["metadata"] = [bundle["metadata"][index] for index in keep_indices]
     bundle["targets_raw"] = bundle["targets_raw"][keep_indices]
     bundle["targets_transformed"] = bundle["targets_transformed"][keep_indices]
+    physics_context = bundle.get("physics_context")
+    if physics_context is not None:
+        bundle["physics_context"] = {
+            field_name: values[keep_indices]
+            for field_name, values in physics_context.items()
+        }
     torch.save(bundle, bundle_path)
 
     metadata_df = pd.DataFrame(bundle["metadata"])
@@ -318,29 +325,152 @@ def _subsample_bundle_by_lake(bundle_path: Path, max_windows_per_lake: int, seed
     )
 
 
+def _write_data_processing_report(
+    run_dir: Path,
+    validation_report: dict[str, Any],
+    prepared_df: pd.DataFrame,
+    config: dict[str, Any],
+    validation_report_path: Path,
+) -> Path:
+    time_column = config["data"]["datetime_column"]
+    lake_column = config["data"]["lake_column"]
+    prepared_times = pd.to_datetime(prepared_df[time_column], errors="coerce") if not prepared_df.empty else pd.Series(dtype="datetime64[ns]")
+    report = {
+        "raw_validation_report_path": str(validation_report_path),
+        "raw_excel_path": validation_report.get("raw_excel_path"),
+        "raw_row_count": int(validation_report.get("row_count", 0)),
+        "raw_unique_lakes": int(validation_report.get("unique_lakes", 0)),
+        "invalid_sample_datetime": int(validation_report.get("invalid_sample_datetime", 0)),
+        "missing_target": int(validation_report.get("missing_target", 0)),
+        "negative_target_count": int(validation_report.get("negative_target_count", 0)),
+        "prepared_row_count": int(len(prepared_df)),
+        "prepared_unique_lakes": int(prepared_df[lake_column].nunique(dropna=True)),
+        "prepared_datetime_min": None if prepared_times.empty else str(prepared_times.min()),
+        "prepared_datetime_max": None if prepared_times.empty else str(prepared_times.max()),
+        "rows_removed_from_raw_to_prepared": int(validation_report.get("row_count", 0) - len(prepared_df)),
+        "prepared_csv_path": config["paths"]["prepared_csv"],
+        "note": "prepared_row_count reflects all preprocessing effects, including configured lake filtering and dropping rows with invalid datetime or missing target.",
+    }
+    output_path = run_dir / "artifacts" / "data_processing_report.json"
+    save_json(report, output_path)
+    return output_path
+
+
 def _write_experiment_summary(output_root: Path, experiment_name: str, fold_summary: dict[str, Any]) -> None:
     experiment_root = output_root / experiment_name
     summary_dir = experiment_root / "summary"
     summary_dir.mkdir(parents=True, exist_ok=True)
     summary_df = pd.DataFrame([fold_summary])
-    save_dataframe(summary_df, summary_dir / "fold_summary.csv")
-    save_json([fold_summary], summary_dir / "fold_summary.json")
+    save_dataframe(summary_df, summary_dir / f"{experiment_name}_summary.csv")
+    save_json([fold_summary], summary_dir / f"{experiment_name}_summary.json")
 
     analysis_lines = [
-        "# Xiaoxingkai Transfer Summary",
+        f"# {experiment_name} Summary",
         "",
         f"- Target lake: {fold_summary['target_lake']}",
         f"- Training lakes: {fold_summary['train_lakes']}",
         f"- Validation RMSE: {fold_summary['val_rmse']:.4f}",
         f"- Test RMSE: {fold_summary['test_rmse']:.4f}" if not np.isnan(fold_summary["test_rmse"]) else "- Test RMSE: n/a",
+        f"- Test method: {fold_summary.get('test_method', 'n/a')}",
+        f"- Seasonal rollout test start: {fold_summary.get('seasonal_test_start_datetime', 'n/a')}",
         "",
         "## Interpretation",
         "",
         "- Xiaoxingkai rows before the cutoff are split into train and validation by time order.",
-        "- Xiaoxingkai rows from the cutoff onward are reserved for test only.",
+        "- Xiaoxingkai rows from the cutoff onward are withheld from training and only used as observation checkpoints during seasonal-rollout testing.",
         "- Source lakes still use their own temporal train/val split.",
+        "- The reported test metrics come from the overlap between the continuous autoregressive seasonal rollout and the observed Xiaoxingkai dates.",
     ]
-    (summary_dir / "analysis.md").write_text("\n".join(analysis_lines), encoding="utf-8")
+    (summary_dir / f"{experiment_name}_analysis.md").write_text("\n".join(analysis_lines), encoding="utf-8")
+
+
+def _promote_seasonal_rollout_as_test(
+    run_dir: Path,
+    seasonal_rollout_artifacts,
+    logger,
+) -> dict[str, Any]:
+    metrics_path = run_dir / "metrics.csv"
+    run_summary_path = run_dir / "run_summary.json"
+    test_predictions_path = run_dir / "test_predictions.csv"
+    per_lake_metrics_path = run_dir / "per_lake_metrics.csv"
+
+    metrics_df = load_dataframe(metrics_path)
+    run_summary = json.loads(run_summary_path.read_text(encoding="utf-8"))
+    metrics_df = metrics_df.loc[metrics_df["split"] != "test"].reset_index(drop=True)
+
+    if seasonal_rollout_artifacts is None:
+        test_row = {
+            "split": "test",
+            "loss": np.nan,
+            "rmse": np.nan,
+            "mae": np.nan,
+            "r2": np.nan,
+            "bias": np.nan,
+            "negative_count": np.nan,
+        }
+        rollout_metrics: dict[str, Any] = {}
+        overlap_count = 0
+        save_dataframe(pd.DataFrame(columns=["lake_name", "sample_datetime", "y_true", "y_pred"]), test_predictions_path)
+        save_dataframe(pd.DataFrame(), per_lake_metrics_path)
+    else:
+        overlap_df = load_dataframe(
+            seasonal_rollout_artifacts.overlap_predictions_path,
+            parse_dates=["sample_datetime"],
+        )
+        rollout_metrics = json.loads(
+            seasonal_rollout_artifacts.overlap_metrics_json_path.read_text(encoding="utf-8")
+        )
+        overlap_count = int(rollout_metrics.get("count", 0))
+        if overlap_df.empty:
+            test_row = {
+                "split": "test",
+                "loss": np.nan,
+                "rmse": np.nan,
+                "mae": np.nan,
+                "r2": np.nan,
+                "bias": np.nan,
+                "negative_count": np.nan,
+            }
+            save_dataframe(overlap_df, test_predictions_path)
+            save_dataframe(pd.DataFrame(), per_lake_metrics_path)
+        else:
+            residuals = overlap_df["y_pred"].to_numpy() - overlap_df["y_true"].to_numpy()
+            test_loss = float(np.mean(np.square(residuals)))
+            test_row = {
+                "split": "test",
+                "loss": test_loss,
+                "rmse": float(rollout_metrics["rmse"]),
+                "mae": float(rollout_metrics["mae"]),
+                "r2": float(rollout_metrics["r2"]),
+                "bias": float(rollout_metrics["bias"]),
+                "negative_count": float(rollout_metrics["negative_count"]),
+            }
+            save_dataframe(overlap_df, test_predictions_path)
+            save_dataframe(compute_per_lake_metrics(overlap_df), per_lake_metrics_path)
+
+    metrics_df = pd.concat([metrics_df, pd.DataFrame([test_row])], ignore_index=True)
+    save_dataframe(metrics_df, metrics_path)
+
+    run_summary["final_test_loss"] = test_row["loss"]
+    run_summary["test_method"] = "seasonal_rollout_overlap"
+    run_summary["seasonal_test_start_datetime"] = rollout_metrics.get("test_start_datetime")
+    run_summary["seasonal_rollout_start_datetime"] = rollout_metrics.get("rollout_start_datetime")
+    run_summary["seasonal_rollout_end_datetime"] = rollout_metrics.get("rollout_end_datetime")
+    run_summary["seasonal_rollout_overlap_start_datetime"] = rollout_metrics.get("overlap_start_datetime")
+    run_summary["seasonal_rollout_overlap_end_datetime"] = rollout_metrics.get("overlap_end_datetime")
+    run_summary["seasonal_rollout_overlap_count"] = overlap_count
+    run_summary["seasonal_rollout_rows"] = int(rollout_metrics.get("rollout_rows", 0))
+    save_json(run_summary, run_summary_path)
+    logger.info(
+        "Promoted seasonal rollout overlap as the only test metric source | overlap_count=%d | test_start=%s",
+        overlap_count,
+        run_summary.get("seasonal_test_start_datetime"),
+    )
+    return {
+        "metrics": test_row,
+        "overlap_count": overlap_count,
+        "rollout_metrics": rollout_metrics,
+    }
 
 
 def run(config: dict, paths, base_logger) -> dict[str, Any]:
@@ -351,7 +481,23 @@ def run(config: dict, paths, base_logger) -> dict[str, Any]:
     logger.info("Starting experiment '%s'", config["experiment"]["name"])
     logger.info("Run directory: %s", run_context.run_dir)
 
+    validation_report = validate_and_save(config, paths, logger)
     prepared_df = load_or_prepare_dataframe(config, paths, logger)
+    data_processing_report_path = _write_data_processing_report(
+        run_dir=run_context.run_dir,
+        validation_report=validation_report,
+        prepared_df=prepared_df,
+        config=config,
+        validation_report_path=paths.validation_report_json,
+    )
+    logger.info("Data processing report saved to %s", data_processing_report_path)
+    if validation_report.get("invalid_sample_datetime", 0) or validation_report.get("missing_target", 0):
+        logger.warning(
+            "Raw data quality issues detected | invalid_sample_datetime=%d | missing_target=%d | validation_report=%s",
+            int(validation_report.get("invalid_sample_datetime", 0)),
+            int(validation_report.get("missing_target", 0)),
+            paths.validation_report_json,
+        )
     available_lakes = sorted(prepared_df[config["data"]["lake_column"]].dropna().astype(str).unique().tolist())
     target_lake = _resolve_xiaoxingkai_lake_name(available_lakes)
     fold = FoldSpec(
@@ -415,20 +561,11 @@ def run(config: dict, paths, base_logger) -> dict[str, Any]:
     )
     test_loader = None
     test_dataset_size = 0
-    if _bundle_count(coeff_paths["test"]) > 0:
-        _, test_loader = create_dataloader(
-            coeff_paths["test"],
-            batch_size=int(config["train"]["batch_size"]),
-            shuffle=False,
-            num_workers=int(config["train"]["num_workers"]),
-            batch_parallel=bool(config["train"].get("batch_parallel", False)),
-        )
-        test_dataset_size = len(test_loader.dataset)
     logger.info(
-        "Data summary | train=%d | val=%d | test=%d | input_channels=%d | batch_parallel=%s",
+        "Data summary | train=%d | val=%d | rollout_test=%s | input_channels=%d | batch_parallel=%s",
         len(train_dataset),
         len(val_loader.dataset),
-        test_dataset_size,
+        "enabled" if bool(config.get("seasonal_rollout", {}).get("enabled", False)) else "disabled",
         len(train_dataset.input_channels),
         bool(config["train"].get("batch_parallel", False)),
     )
@@ -453,21 +590,29 @@ def run(config: dict, paths, base_logger) -> dict[str, Any]:
         run_dir=run_context.run_dir,
         logger=logger,
     )
+    rollout_test_summary = _promote_seasonal_rollout_as_test(
+        run_dir=run_context.run_dir,
+        seasonal_rollout_artifacts=seasonal_rollout_artifacts,
+        logger=logger,
+    )
 
     run_manifest = {
         "split_name": fold.name,
-        "split_type": "target_lake_temporal_holdout" if test_loader is not None else "target_lake_temporal_validation",
+        "split_type": "target_lake_temporal_rollout_overlap_test",
         "target_lake": fold.target_lake,
         "train_lakes": fold.train_lakes,
         "split_manifest_path": str(manifest_path),
         "train_coeff_path": str(coeff_paths["train"]),
         "val_coeff_path": str(coeff_paths["val"]),
-        "test_coeff_path": None if test_loader is None else str(coeff_paths["test"]),
+        "test_coeff_path": None,
         "train_window_path": str(bundle_paths["train"]),
         "val_window_path": str(bundle_paths["val"]),
-        "test_window_path": None if test_loader is None else str(bundle_paths["test"]),
+        "test_window_path": None,
         "project_root": str(paths.project_root),
+        "validation_report_path": str(paths.validation_report_json),
+        "data_processing_report_path": str(data_processing_report_path),
         "seasonal_rollout_predictions_path": None if seasonal_rollout_artifacts is None else str(seasonal_rollout_artifacts.predictions_path),
+        "seasonal_rollout_overlap_predictions_path": None if seasonal_rollout_artifacts is None else str(seasonal_rollout_artifacts.overlap_predictions_path),
         "seasonal_rollout_overlap_metrics_path": None if seasonal_rollout_artifacts is None else str(seasonal_rollout_artifacts.overlap_metrics_path),
         "seasonal_rollout_window_path": None if seasonal_rollout_artifacts is None else str(seasonal_rollout_artifacts.window_path),
         "seasonal_rollout_coeff_path": None if seasonal_rollout_artifacts is None else str(seasonal_rollout_artifacts.coeff_path),
@@ -498,6 +643,7 @@ def run(config: dict, paths, base_logger) -> dict[str, Any]:
     test_rows = metrics_df.loc[metrics_df["split"] == "test"]
     test_metrics = test_rows.iloc[0].to_dict() if not test_rows.empty else {"rmse": np.nan, "mae": np.nan, "r2": np.nan}
     val_metrics = metrics_df.loc[metrics_df["split"] == "val"].iloc[0].to_dict()
+    rollout_metrics = rollout_test_summary.get("rollout_metrics", {})
 
     fold_summary = {
         "fold_name": fold.name,
@@ -506,7 +652,7 @@ def run(config: dict, paths, base_logger) -> dict[str, Any]:
         "run_dir": str(run_context.run_dir),
         "train_windows": int(len(train_dataset)),
         "val_windows": int(len(val_loader.dataset)),
-        "test_windows": int(test_dataset_size),
+        "test_windows": int(rollout_test_summary.get("overlap_count", 0)),
         "best_epoch": int(summary["best_epoch"]),
         "best_val_rmse": float(summary["best_val_rmse"]),
         "final_val_loss": float(summary["final_val_loss"]),
@@ -517,6 +663,10 @@ def run(config: dict, paths, base_logger) -> dict[str, Any]:
         "test_rmse": float(test_metrics["rmse"]),
         "test_mae": float(test_metrics["mae"]),
         "test_r2": float(test_metrics["r2"]),
+        "test_method": "seasonal_rollout_overlap",
+        "seasonal_test_start_datetime": rollout_metrics.get("test_start_datetime"),
+        "seasonal_rollout_overlap_start_datetime": rollout_metrics.get("overlap_start_datetime"),
+        "seasonal_rollout_overlap_end_datetime": rollout_metrics.get("overlap_end_datetime"),
     }
     _write_experiment_summary(paths.output_root, config["experiment"]["name"], fold_summary)
     base_logger.info("Finished experiment '%s'. Run directory: %s", config["experiment"]["name"], run_context.run_dir)

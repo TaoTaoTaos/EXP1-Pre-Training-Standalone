@@ -93,8 +93,18 @@ def plot_residual_histogram(predictions: pd.DataFrame, path: Path) -> None:
     _finalize_figure(fig, path)
 
 
-def create_lake_timeseries_figure(predictions: pd.DataFrame, lake_name: str) -> plt.Figure:
+def create_lake_timeseries_figure(
+    predictions: pd.DataFrame,
+    lake_name: str,
+    start_datetime: str | pd.Timestamp | None = None,
+    end_datetime: str | pd.Timestamp | None = None,
+    title: str | None = None,
+) -> plt.Figure:
     lake_df = predictions.loc[predictions["lake_name"] == lake_name].sort_values("sample_datetime")
+    if start_datetime is not None:
+        lake_df = lake_df.loc[lake_df["sample_datetime"] >= pd.Timestamp(start_datetime)]
+    if end_datetime is not None:
+        lake_df = lake_df.loc[lake_df["sample_datetime"] <= pd.Timestamp(end_datetime)]
     fig, ax = plt.subplots(figsize=(10, 4))
     ax.plot(lake_df["sample_datetime"], lake_df["y_true"], label="Observed", linewidth=2, color="#1f77b4")
     ax.scatter(
@@ -107,7 +117,7 @@ def create_lake_timeseries_figure(predictions: pd.DataFrame, lake_name: str) -> 
         edgecolors="white",
         linewidths=0.3,
     )
-    ax.set_title(f"Lake Time Series | {_display_lake_name(lake_name)}")
+    ax.set_title(title or f"Lake Time Series | {_display_lake_name(lake_name)}")
     ax.set_xlabel("Datetime")
     ax.set_ylabel("Ice thickness (m)")
     ax.grid(True, alpha=0.3)

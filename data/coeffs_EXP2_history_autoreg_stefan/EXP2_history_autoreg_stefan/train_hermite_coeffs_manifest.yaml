@@ -1,0 +1,6 @@
+split_name: EXP2_history_autoreg_stefan
+split: train
+interpolation: hermite
+bundle_path: S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\coeffs_EXP2_history_autoreg_stefan\EXP2_history_autoreg_stefan\train_hermite_coeffs.pt
+metadata_path: S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\coeffs_EXP2_history_autoreg_stefan\EXP2_history_autoreg_stefan\train_hermite_coeffs_metadata.csv
+count: 828

@@ -55,7 +55,7 @@ seasonal_rollout:
   autoregressive_history: true
   target_lake_name: "Xiaoxingkai"
   era5_csv: "data/raw/XXKH-St-UTC+8-ERA5-1980-202603-noNA.csv"
-  start_datetime: "2025-10-01 12:00:00"
+  test_start_datetime: "2025-10-01 12:00:00"
   end_datetime: "2026-03-31 12:00:00"
   daily_hour: 12
 

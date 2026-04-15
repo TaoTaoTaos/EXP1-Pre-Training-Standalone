@@ -7,25 +7,38 @@ This repository is a standalone Neural CDE training project for one task: train 
 There is one supported entry point:
 
 ```powershell
-python -m lakeice_ncde run --config configs/experiments/xiaoxingkai_transfer.yaml
+python -m lakeice_ncde run --config configs/experiments/EXP1_history_autoreg.yaml
 ```
 
 After editable install, the equivalent command is:
 
 ```powershell
-lakeice-ncde run --config configs/experiments/xiaoxingkai_transfer.yaml
+lakeice-ncde run --config configs/experiments/EXP1_history_autoreg.yaml
 ```
 
 ## Available Configs
 
+- `configs/experiments/EXP1_history_autoreg.yaml`
+  Recommended EXP1 config. Adds lagged ice-history features and uses autoregressive seasonal rollout.
+- `configs/experiments/EXP2_history_autoreg_stefan.yaml`
+  Recommended EXP2 config. Builds on EXP1 and adds a Stefan-style physics loss.
 - `configs/experiments/xiaoxingkai_transfer.yaml`
-  Uses the normalized `less60` dataset and tests on Xiaoxingkai.
+  Legacy baseline. Uses the normalized `less60` dataset and tests on Xiaoxingkai.
 - `configs/experiments/xiaoxingkai_transfer_daily12.yaml`
-  Same workflow, but the Xiaoxingkai test rows are restricted to 12:00 observations.
+  Legacy baseline with Xiaoxingkai test rows restricted to 12:00 observations.
 - `configs/experiments/xiaoxingkai_transfer_daily12_history_autoreg.yaml`
-  Adds lagged ice-history features and seasonal autoregressive rollout evaluation.
+  Legacy long-name version of EXP1.
 - `configs/experiments/xiaoxingkai_transfer_daily12_history_autoreg_physics.yaml`
-  Same as the history-autoregressive setting, but adds a Stefan-style physics loss using previous ice thickness, sub-freezing degree-days, and a learnable `kappa`.
+  Legacy long-name version of EXP2.
+
+## Recommended Workflow
+
+Use the short experiment names for the current two-stage workflow:
+
+1. `EXP1_history_autoreg`
+   History-feature baseline with autoregressive rollout.
+2. `EXP2_history_autoreg_stefan`
+   EXP1 plus Stefan-style physics regularization.
 
 ## Workflow
 
