@@ -1,0 +1,115 @@
+2026-04-15 13:30:04,815 | INFO | lakeice_ncde | Starting experiment 'xiaoxingkai_transfer_daily12_history_autoreg'
+2026-04-15 13:30:04,821 | INFO | lakeice_ncde | Run directory: S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\outputs\runs\xiaoxingkai_transfer_daily12_history_autoreg\xiaoxingkai_transfer_daily12_history_autoreg_20260415_133004
+2026-04-15 13:30:04,842 | INFO | lakeice_ncde | Running target transfer | target=【Li】Lake Xiaoxingkai | train=['【Huo】Lake Hnagzhang', '【Huo】Lake Ulansu', '【IISD Experimental】Lake 239', '【IISD Experimental】Lake 302', '【North Temperate Lakes LTER】Big Muskellunge Lake', '【North Temperate Lakes LTER】Bog 12-15 (Trout Bog)', '【North Temperate Lakes LTER】Bog 27-2 (Crystal Bog)', '【North Temperate Lakes LTER】Crystal Lake (NTL)']
+2026-04-15 13:30:04,847 | INFO | lakeice_ncde | Target lake test starts at 2026-01-01; target rows before the cutoff are split into train and val.
+2026-04-15 13:30:04,849 | INFO | lakeice_ncde | Config summary | interpolation=hermite | method=kr4 | window_days=7 | batch_size=64 | target_transform=none
+2026-04-15 13:30:04,889 | INFO | lakeice_ncde | Fold 'xiaoxingkai_transfer_daily12_history_autoreg' -> train lakes (9): ['【Huo】Lake Hnagzhang', '【Huo】Lake Ulansu', '【IISD Experimental】Lake 239', '【IISD Experimental】Lake 302', '【Li】Lake Xiaoxingkai', '【North Temperate Lakes LTER】Big Muskellunge Lake', '【North Temperate Lakes LTER】Bog 12-15 (Trout Bog)', '【North Temperate Lakes LTER】Bog 27-2 (Crystal Bog)', '【North Temperate Lakes LTER】Crystal Lake (NTL)']
+2026-04-15 13:30:04,893 | INFO | lakeice_ncde | Fold 'xiaoxingkai_transfer_daily12_history_autoreg' -> val lakes (9): ['【Huo】Lake Hnagzhang', '【Huo】Lake Ulansu', '【IISD Experimental】Lake 239', '【IISD Experimental】Lake 302', '【Li】Lake Xiaoxingkai', '【North Temperate Lakes LTER】Big Muskellunge Lake', '【North Temperate Lakes LTER】Bog 12-15 (Trout Bog)', '【North Temperate Lakes LTER】Bog 27-2 (Crystal Bog)', '【North Temperate Lakes LTER】Crystal Lake (NTL)']
+2026-04-15 13:30:04,896 | INFO | lakeice_ncde | Fold 'xiaoxingkai_transfer_daily12_history_autoreg' -> test lakes (1): ['【Li】Lake Xiaoxingkai']
+2026-04-15 13:30:04,913 | INFO | lakeice_ncde | Building train windows for split 'xiaoxingkai_transfer_daily12_history_autoreg': 929 rows across 9 lakes.
+2026-04-15 13:30:05,106 | INFO | lakeice_ncde | Window progress for split 'train': 1/9 lakes processed, 89 windows built.
+2026-04-15 13:30:05,403 | INFO | lakeice_ncde | Window progress for split 'train': 2/9 lakes processed, 233 windows built.
+2026-04-15 13:30:05,577 | INFO | lakeice_ncde | Window progress for split 'train': 3/9 lakes processed, 250 windows built.
+2026-04-15 13:30:05,658 | INFO | lakeice_ncde | Window progress for split 'train': 4/9 lakes processed, 255 windows built.
+2026-04-15 13:30:05,716 | INFO | lakeice_ncde | Window progress for split 'train': 5/9 lakes processed, 278 windows built.
+2026-04-15 13:30:05,800 | INFO | lakeice_ncde | Window progress for split 'train': 6/9 lakes processed, 278 windows built.
+2026-04-15 13:30:05,902 | INFO | lakeice_ncde | Window progress for split 'train': 7/9 lakes processed, 278 windows built.
+2026-04-15 13:30:06,071 | INFO | lakeice_ncde | Window progress for split 'train': 8/9 lakes processed, 278 windows built.
+2026-04-15 13:30:06,206 | INFO | lakeice_ncde | Window progress for split 'train': 9/9 lakes processed, 278 windows built.
+2026-04-15 13:30:06,236 | INFO | lakeice_ncde | Saved train windows for split 'xiaoxingkai_transfer_daily12_history_autoreg': 278 samples -> S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\windows_xiaoxingkai_transfer_daily12_history_autoreg\xiaoxingkai_transfer_daily12_history_autoreg\train_windows.pt
+2026-04-15 13:30:06,239 | INFO | lakeice_ncde | Building val windows for split 'xiaoxingkai_transfer_daily12_history_autoreg': 113 rows across 9 lakes.
+2026-04-15 13:30:06,282 | INFO | lakeice_ncde | Window progress for split 'val': 1/9 lakes processed, 11 windows built.
+2026-04-15 13:30:06,337 | INFO | lakeice_ncde | Window progress for split 'val': 2/9 lakes processed, 28 windows built.
+2026-04-15 13:30:06,368 | INFO | lakeice_ncde | Window progress for split 'val': 3/9 lakes processed, 30 windows built.
+2026-04-15 13:30:06,394 | INFO | lakeice_ncde | Window progress for split 'val': 4/9 lakes processed, 33 windows built.
+2026-04-15 13:30:06,419 | INFO | lakeice_ncde | Window progress for split 'val': 5/9 lakes processed, 40 windows built.
+2026-04-15 13:30:06,446 | INFO | lakeice_ncde | Window progress for split 'val': 6/9 lakes processed, 40 windows built.
+2026-04-15 13:30:06,473 | INFO | lakeice_ncde | Window progress for split 'val': 7/9 lakes processed, 40 windows built.
+2026-04-15 13:30:06,498 | INFO | lakeice_ncde | Window progress for split 'val': 8/9 lakes processed, 40 windows built.
+2026-04-15 13:30:06,520 | INFO | lakeice_ncde | Window progress for split 'val': 9/9 lakes processed, 40 windows built.
+2026-04-15 13:30:06,532 | INFO | lakeice_ncde | Saved val windows for split 'xiaoxingkai_transfer_daily12_history_autoreg': 40 samples -> S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\windows_xiaoxingkai_transfer_daily12_history_autoreg\xiaoxingkai_transfer_daily12_history_autoreg\val_windows.pt
+2026-04-15 13:30:06,535 | INFO | lakeice_ncde | Building test windows for split 'xiaoxingkai_transfer_daily12_history_autoreg': 37 rows across 1 lakes.
+2026-04-15 13:30:06,621 | INFO | lakeice_ncde | Window progress for split 'test': 1/1 lakes processed, 36 windows built.
+2026-04-15 13:30:06,633 | INFO | lakeice_ncde | Saved test windows for split 'xiaoxingkai_transfer_daily12_history_autoreg': 36 samples -> S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\windows_xiaoxingkai_transfer_daily12_history_autoreg\xiaoxingkai_transfer_daily12_history_autoreg\test_windows.pt
+2026-04-15 13:30:06,713 | INFO | lakeice_ncde | Balanced windows with train cap=160 and val cap=20
+2026-04-15 13:30:07,447 | INFO | lakeice_ncde | Computing hermite coefficients for 278 windows from S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\windows_xiaoxingkai_transfer_daily12_history_autoreg\xiaoxingkai_transfer_daily12_history_autoreg\train_windows.pt
+2026-04-15 13:30:07,450 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 1/278 windows processed.
+2026-04-15 13:30:07,460 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 27/278 windows processed.
+2026-04-15 13:30:07,471 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 54/278 windows processed.
+2026-04-15 13:30:07,485 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 81/278 windows processed.
+2026-04-15 13:30:07,496 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 108/278 windows processed.
+2026-04-15 13:30:07,506 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 135/278 windows processed.
+2026-04-15 13:30:07,517 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 162/278 windows processed.
+2026-04-15 13:30:07,528 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 189/278 windows processed.
+2026-04-15 13:30:07,542 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 216/278 windows processed.
+2026-04-15 13:30:07,554 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 243/278 windows processed.
+2026-04-15 13:30:07,564 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 270/278 windows processed.
+2026-04-15 13:30:07,569 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 278/278 windows processed.
+2026-04-15 13:30:07,621 | INFO | lakeice_ncde | Computing hermite coefficients for 40 windows from S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\windows_xiaoxingkai_transfer_daily12_history_autoreg\xiaoxingkai_transfer_daily12_history_autoreg\val_windows.pt
+2026-04-15 13:30:07,624 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 1/40 windows processed.
+2026-04-15 13:30:07,627 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 4/40 windows processed.
+2026-04-15 13:30:07,630 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 8/40 windows processed.
+2026-04-15 13:30:07,632 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 12/40 windows processed.
+2026-04-15 13:30:07,635 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 16/40 windows processed.
+2026-04-15 13:30:07,638 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 20/40 windows processed.
+2026-04-15 13:30:07,642 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 24/40 windows processed.
+2026-04-15 13:30:07,645 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 28/40 windows processed.
+2026-04-15 13:30:07,648 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 32/40 windows processed.
+2026-04-15 13:30:07,651 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 36/40 windows processed.
+2026-04-15 13:30:07,654 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 40/40 windows processed.
+2026-04-15 13:30:07,679 | INFO | lakeice_ncde | Computing hermite coefficients for 36 windows from S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\windows_xiaoxingkai_transfer_daily12_history_autoreg\xiaoxingkai_transfer_daily12_history_autoreg\test_windows.pt
+2026-04-15 13:30:07,681 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 1/36 windows processed.
+2026-04-15 13:30:07,683 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 3/36 windows processed.
+2026-04-15 13:30:07,686 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 6/36 windows processed.
+2026-04-15 13:30:07,689 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 9/36 windows processed.
+2026-04-15 13:30:07,692 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 12/36 windows processed.
+2026-04-15 13:30:07,695 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 15/36 windows processed.
+2026-04-15 13:30:07,698 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 18/36 windows processed.
+2026-04-15 13:30:07,701 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 21/36 windows processed.
+2026-04-15 13:30:07,704 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 24/36 windows processed.
+2026-04-15 13:30:07,707 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 27/36 windows processed.
+2026-04-15 13:30:07,710 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 30/36 windows processed.
+2026-04-15 13:30:07,713 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 33/36 windows processed.
+2026-04-15 13:30:07,716 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 36/36 windows processed.
+2026-04-15 13:30:07,729 | INFO | lakeice_ncde | Saved 3 coefficient bundle(s) under S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\coeffs_xiaoxingkai_transfer_daily12_history_autoreg
+2026-04-15 13:30:07,802 | INFO | lakeice_ncde | Data summary | train=278 | val=40 | test=36 | input_channels=15 | batch_parallel=True
+2026-04-15 13:30:10,620 | INFO | lakeice_ncde | Training on cuda | train_batches=5 | val_batches=1 | test_batches=1
+2026-04-15 13:30:10,623 | INFO | lakeice_ncde | Epoch 1/120 started.
+2026-04-15 13:30:10,730 | ERROR | lakeice_ncde | Uncaught exception
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\src\lakeice_ncde\__main__.py", line 5, in <module>
+    main()
+  File "S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\src\lakeice_ncde\cli.py", line 30, in main
+    run_xiaoxingkai_transfer(config, paths, logger)
+  File "S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\src\lakeice_ncde\workflows\xiaoxingkai_transfer.py", line 407, in run
+    artifacts = trainer.fit(
+                ^^^^^^^^^^^^
+  File "S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\src\lakeice_ncde\training\engine.py", line 87, in fit
+    train_loss = self._run_epoch(train_loader, train=True, epoch=epoch, max_epochs=max_epochs)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\src\lakeice_ncde\training\engine.py", line 239, in _run_epoch
+    pred_tensor = self._predict_batch(batch)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\src\lakeice_ncde\training\engine.py", line 272, in _predict_batch
+    group_pred = self.model(coeff)
+                 ^^^^^^^^^^^^^^^^^
+  File "S:\Anaconda3\ANACONDA\envs\SCI\Lib\site-packages\torch\nn\modules\module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "S:\Anaconda3\ANACONDA\envs\SCI\Lib\site-packages\torch\nn\modules\module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\src\lakeice_ncde\models\neural_cde.py", line 124, in forward
+    z_t = torchcde.cdeint(
+          ^^^^^^^^^^^^^^^^
+  File "S:\Anaconda3\ANACONDA\envs\SCI\Lib\site-packages\torchcde\solver.py", line 227, in cdeint
+    out = odeint(func=vector_field, y0=z0, t=t, **kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "S:\Anaconda3\ANACONDA\envs\SCI\Lib\site-packages\torchdiffeq\_impl\odeint.py", line 75, in odeint
+    shapes, func, y0, t, rtol, atol, method, options, event_fn, t_is_reversed = _check_inputs(func, y0, t, rtol, atol, method, options, event_fn, SOLVERS)
+                                                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "S:\Anaconda3\ANACONDA\envs\SCI\Lib\site-packages\torchdiffeq\_impl\misc.py", line 233, in _check_inputs
+    raise ValueError('Invalid method "{}". Must be one of {}'.format(method,
+ValueError: Invalid method "kr4". Must be one of {"dopri8", "dopri5", "bosh3", "fehlberg2", "adaptive_heun", "euler", "midpoint", "heun2", "heun3", "rk4", "explicit_adams", "implicit_adams", "fixed_adams", "scipy_solver"}.

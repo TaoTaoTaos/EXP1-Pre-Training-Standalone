@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lakeice-ncde"
+version = "0.1.0"
+description = "Standalone Neural CDE training pipeline for Xiaoxingkai lake-ice transfer experiments."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+  { name = "OpenAI Codex" }
+]
+dependencies = [
+  "joblib>=1.4",
+  "matplotlib>=3.9",
+  "numpy>=1.26,<2.0",
+  "openpyxl>=3.1",
+  "optuna>=4.4",
+  "pandas>=2.2",
+  "PyYAML>=6.0",
+  "rich>=13.9",
+  "scikit-learn>=1.5",
+  "torch>=2.4",
+  "torchcde>=0.2.5",
+  "torchdiffeq>=0.2.5",
+  "torchsde>=0.2.6",
+]
+
+[project.scripts]
+lakeice-ncde = "lakeice_ncde.cli:main"
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3",
+]
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

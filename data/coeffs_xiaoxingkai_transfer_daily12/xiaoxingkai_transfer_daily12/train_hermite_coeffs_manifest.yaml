@@ -1,0 +1,6 @@
+split_name: xiaoxingkai_transfer_daily12
+split: train
+interpolation: hermite
+bundle_path: S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\coeffs_xiaoxingkai_transfer_daily12\xiaoxingkai_transfer_daily12\train_hermite_coeffs.pt
+metadata_path: S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\coeffs_xiaoxingkai_transfer_daily12\xiaoxingkai_transfer_daily12\train_hermite_coeffs_metadata.csv
+count: 278

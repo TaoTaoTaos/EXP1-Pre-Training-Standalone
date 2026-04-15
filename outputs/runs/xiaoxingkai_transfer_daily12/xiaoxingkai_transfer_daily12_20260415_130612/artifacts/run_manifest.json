@@ -1,0 +1,30 @@
+{
+  "split_name": "xiaoxingkai_transfer_daily12",
+  "split_type": "target_lake_temporal_holdout",
+  "target_lake": "【Li】Lake Xiaoxingkai",
+  "train_lakes": [
+    "【Huo】Lake Hnagzhang",
+    "【Huo】Lake Ulansu",
+    "【North Temperate Lakes LTER】Crystal Lake (NTL)",
+    "【North Temperate Lakes LTER】Bog 27-2 (Crystal Bog)",
+    "【North Temperate Lakes LTER】Sparkling Lake",
+    "【North Temperate Lakes LTER】Big Muskellunge Lake",
+    "【North Temperate Lakes LTER】Allequash Lake",
+    "【North Temperate Lakes LTER】Bog 12-15 (Trout Bog)",
+    "【North Temperate Lakes LTER】Trout Lake",
+    "【IISD Experimental】Lake 239",
+    "【IISD Experimental】Lake 302"
+  ],
+  "split_manifest_path": "S:\\STU-Papers\\My_Papers\\EXP1-Pre-Training-Standalone\\data\\splits_xiaoxingkai_transfer_daily12\\xiaoxingkai_transfer_daily12\\split_manifest.yaml",
+  "train_coeff_path": "S:\\STU-Papers\\My_Papers\\EXP1-Pre-Training-Standalone\\data\\coeffs_xiaoxingkai_transfer_daily12\\xiaoxingkai_transfer_daily12\\train_hermite_coeffs.pt",
+  "val_coeff_path": "S:\\STU-Papers\\My_Papers\\EXP1-Pre-Training-Standalone\\data\\coeffs_xiaoxingkai_transfer_daily12\\xiaoxingkai_transfer_daily12\\val_hermite_coeffs.pt",
+  "test_coeff_path": "S:\\STU-Papers\\My_Papers\\EXP1-Pre-Training-Standalone\\data\\coeffs_xiaoxingkai_transfer_daily12\\xiaoxingkai_transfer_daily12\\test_hermite_coeffs.pt",
+  "train_window_path": "S:\\STU-Papers\\My_Papers\\EXP1-Pre-Training-Standalone\\data\\windows_xiaoxingkai_transfer_daily12\\xiaoxingkai_transfer_daily12\\train_windows.pt",
+  "val_window_path": "S:\\STU-Papers\\My_Papers\\EXP1-Pre-Training-Standalone\\data\\windows_xiaoxingkai_transfer_daily12\\xiaoxingkai_transfer_daily12\\val_windows.pt",
+  "test_window_path": "S:\\STU-Papers\\My_Papers\\EXP1-Pre-Training-Standalone\\data\\windows_xiaoxingkai_transfer_daily12\\xiaoxingkai_transfer_daily12\\test_windows.pt",
+  "project_root": "S:\\STU-Papers\\My_Papers\\EXP1-Pre-Training-Standalone",
+  "seasonal_rollout_predictions_path": "S:\\STU-Papers\\My_Papers\\EXP1-Pre-Training-Standalone\\outputs\\runs\\xiaoxingkai_transfer_daily12\\xiaoxingkai_transfer_daily12_20260415_130612\\seasonal_rollout_predictions.csv",
+  "seasonal_rollout_overlap_metrics_path": "S:\\STU-Papers\\My_Papers\\EXP1-Pre-Training-Standalone\\outputs\\runs\\xiaoxingkai_transfer_daily12\\xiaoxingkai_transfer_daily12_20260415_130612\\seasonal_rollout_overlap_metrics.csv",
+  "seasonal_rollout_window_path": "S:\\STU-Papers\\My_Papers\\EXP1-Pre-Training-Standalone\\outputs\\runs\\xiaoxingkai_transfer_daily12\\xiaoxingkai_transfer_daily12_20260415_130612\\artifacts\\seasonal_rollout_windows.pt",
+  "seasonal_rollout_coeff_path": "S:\\STU-Papers\\My_Papers\\EXP1-Pre-Training-Standalone\\data\\coeffs_xiaoxingkai_transfer_daily12\\xiaoxingkai_transfer_daily12\\seasonal_rollout_hermite_coeffs.pt"
+}

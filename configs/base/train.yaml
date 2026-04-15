@@ -1,0 +1,21 @@
+train:
+  seed: 42
+  batch_size: 64
+  batch_parallel: true
+  num_workers: 0
+  learning_rate: 0.001
+  weight_decay: 1.0e-4
+  max_epochs: 50
+  gradient_clip_norm: 1.0
+  optimizer: "adamw"
+  loss: "mse"
+  huber_delta: 1.0
+  device: "auto"
+  early_stopping:
+    patience: 15
+    min_delta: 1.0e-5
+  scheduler:
+    name: "none"
+    factor: 0.5
+    patience: 5
+    min_lr: 1.0e-6

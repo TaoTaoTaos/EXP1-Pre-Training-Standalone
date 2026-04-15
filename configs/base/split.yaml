@@ -1,0 +1,4 @@
+split:
+  strategy: "time_holdout"
+  name: "default_split"
+  seed: 42

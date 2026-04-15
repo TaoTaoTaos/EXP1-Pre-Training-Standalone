@@ -1,0 +1,22 @@
+features:
+  time_channel_name: "relative_time"
+  cyclical_columns:
+    - "doy_sin"
+    - "doy_cos"
+  feature_columns:
+    - "doy_sin"
+    - "doy_cos"
+    - "latitude"
+    - "longitude"
+    - "Ten_Meter_Elevation_Wind_Speed_meterPerSecond"
+    - "Air_Temperature_celsius"
+    - "Relative_Humidity_percent"
+    - "Shortwave_Radiation_Downwelling_wattPerMeterSquared"
+    - "Longwave_Radiation_Downwelling_wattPerMeterSquared"
+    - "Sea_Level_Barometric_Pressure_pascal"
+    - "Surface_Level_Barometric_Pressure_pascal"
+    - "Precipitation_millimeterPerDay"
+    - "Snowfall_millimeterPerDay"
+  target_transform: "none"
+  input_scaler: "standard"
+  exclude_target_from_inputs: true

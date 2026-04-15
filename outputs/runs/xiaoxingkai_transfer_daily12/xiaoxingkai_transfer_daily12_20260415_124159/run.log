@@ -1,0 +1,534 @@
+2026-04-15 12:41:59,182 | INFO | lakeice_ncde | Starting experiment 'xiaoxingkai_transfer_daily12'
+2026-04-15 12:41:59,186 | INFO | lakeice_ncde | Run directory: S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\outputs\runs\xiaoxingkai_transfer_daily12\xiaoxingkai_transfer_daily12_20260415_124159
+2026-04-15 12:41:59,187 | INFO | lakeice_ncde | Running target transfer | target=【Li】Lake Xiaoxingkai | train=['【Huo】Lake Hnagzhang', '【Huo】Lake Ulansu', '【North Temperate Lakes LTER】Crystal Lake (NTL)', '【North Temperate Lakes LTER】Bog 27-2 (Crystal Bog)', '【North Temperate Lakes LTER】Sparkling Lake', '【North Temperate Lakes LTER】Big Muskellunge Lake', '【North Temperate Lakes LTER】Allequash Lake', '【North Temperate Lakes LTER】Bog 12-15 (Trout Bog)', '【North Temperate Lakes LTER】Trout Lake', '【IISD Experimental】Lake 239', '【IISD Experimental】Lake 302']
+2026-04-15 12:41:59,193 | INFO | lakeice_ncde | Target lake test starts at 2026-01-01; target rows before the cutoff are split into train and val.
+2026-04-15 12:41:59,194 | INFO | lakeice_ncde | Config summary | interpolation=hermite | method=midpoint | window_days=10 | batch_size=64 | target_transform=none
+2026-04-15 12:41:59,251 | INFO | lakeice_ncde | Fold 'xiaoxingkai_transfer_daily12' -> train lakes (12): ['【Huo】Lake Hnagzhang', '【Huo】Lake Ulansu', '【IISD Experimental】Lake 239', '【IISD Experimental】Lake 302', '【Li】Lake Xiaoxingkai', '【North Temperate Lakes LTER】Allequash Lake', '【North Temperate Lakes LTER】Big Muskellunge Lake', '【North Temperate Lakes LTER】Bog 12-15 (Trout Bog)', '【North Temperate Lakes LTER】Bog 27-2 (Crystal Bog)', '【North Temperate Lakes LTER】Crystal Lake (NTL)', '【North Temperate Lakes LTER】Sparkling Lake', '【North Temperate Lakes LTER】Trout Lake']
+2026-04-15 12:41:59,255 | INFO | lakeice_ncde | Fold 'xiaoxingkai_transfer_daily12' -> val lakes (12): ['【Huo】Lake Hnagzhang', '【Huo】Lake Ulansu', '【IISD Experimental】Lake 239', '【IISD Experimental】Lake 302', '【Li】Lake Xiaoxingkai', '【North Temperate Lakes LTER】Allequash Lake', '【North Temperate Lakes LTER】Big Muskellunge Lake', '【North Temperate Lakes LTER】Bog 12-15 (Trout Bog)', '【North Temperate Lakes LTER】Bog 27-2 (Crystal Bog)', '【North Temperate Lakes LTER】Crystal Lake (NTL)', '【North Temperate Lakes LTER】Sparkling Lake', '【North Temperate Lakes LTER】Trout Lake']
+2026-04-15 12:41:59,258 | INFO | lakeice_ncde | Fold 'xiaoxingkai_transfer_daily12' -> test lakes (1): ['【Li】Lake Xiaoxingkai']
+2026-04-15 12:41:59,273 | INFO | lakeice_ncde | Building train windows for split 'xiaoxingkai_transfer_daily12': 1251 rows across 12 lakes.
+2026-04-15 12:41:59,482 | INFO | lakeice_ncde | Window progress for split 'train': 1/12 lakes processed, 89 windows built.
+2026-04-15 12:41:59,808 | INFO | lakeice_ncde | Window progress for split 'train': 2/12 lakes processed, 233 windows built.
+2026-04-15 12:42:00,011 | INFO | lakeice_ncde | Window progress for split 'train': 3/12 lakes processed, 254 windows built.
+2026-04-15 12:42:00,117 | INFO | lakeice_ncde | Window progress for split 'train': 4/12 lakes processed, 260 windows built.
+2026-04-15 12:42:00,184 | INFO | lakeice_ncde | Window progress for split 'train': 5/12 lakes processed, 283 windows built.
+2026-04-15 12:42:00,271 | INFO | lakeice_ncde | Window progress for split 'train': 6/12 lakes processed, 284 windows built.
+2026-04-15 12:42:00,448 | INFO | lakeice_ncde | Window progress for split 'train': 7/12 lakes processed, 284 windows built.
+2026-04-15 12:42:00,606 | INFO | lakeice_ncde | Window progress for split 'train': 8/12 lakes processed, 284 windows built.
+2026-04-15 12:42:00,734 | INFO | lakeice_ncde | Window progress for split 'train': 9/12 lakes processed, 284 windows built.
+2026-04-15 12:42:00,848 | INFO | lakeice_ncde | Window progress for split 'train': 10/12 lakes processed, 284 windows built.
+2026-04-15 12:42:00,975 | INFO | lakeice_ncde | Window progress for split 'train': 11/12 lakes processed, 284 windows built.
+2026-04-15 12:42:01,109 | INFO | lakeice_ncde | Window progress for split 'train': 12/12 lakes processed, 284 windows built.
+2026-04-15 12:42:01,141 | INFO | lakeice_ncde | Saved train windows for split 'xiaoxingkai_transfer_daily12': 284 samples -> S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\windows_xiaoxingkai_transfer_daily12\xiaoxingkai_transfer_daily12\train_windows.pt
+2026-04-15 12:42:01,145 | INFO | lakeice_ncde | Building val windows for split 'xiaoxingkai_transfer_daily12': 150 rows across 12 lakes.
+2026-04-15 12:42:01,191 | INFO | lakeice_ncde | Window progress for split 'val': 1/12 lakes processed, 11 windows built.
+2026-04-15 12:42:01,255 | INFO | lakeice_ncde | Window progress for split 'val': 2/12 lakes processed, 28 windows built.
+2026-04-15 12:42:01,288 | INFO | lakeice_ncde | Window progress for split 'val': 3/12 lakes processed, 30 windows built.
+2026-04-15 12:42:01,314 | INFO | lakeice_ncde | Window progress for split 'val': 4/12 lakes processed, 33 windows built.
+2026-04-15 12:42:01,338 | INFO | lakeice_ncde | Window progress for split 'val': 5/12 lakes processed, 40 windows built.
+2026-04-15 12:42:01,363 | INFO | lakeice_ncde | Window progress for split 'val': 6/12 lakes processed, 40 windows built.
+2026-04-15 12:42:01,391 | INFO | lakeice_ncde | Window progress for split 'val': 7/12 lakes processed, 40 windows built.
+2026-04-15 12:42:01,417 | INFO | lakeice_ncde | Window progress for split 'val': 8/12 lakes processed, 41 windows built.
+2026-04-15 12:42:01,444 | INFO | lakeice_ncde | Window progress for split 'val': 9/12 lakes processed, 41 windows built.
+2026-04-15 12:42:01,471 | INFO | lakeice_ncde | Window progress for split 'val': 10/12 lakes processed, 41 windows built.
+2026-04-15 12:42:01,498 | INFO | lakeice_ncde | Window progress for split 'val': 11/12 lakes processed, 41 windows built.
+2026-04-15 12:42:01,533 | INFO | lakeice_ncde | Window progress for split 'val': 12/12 lakes processed, 41 windows built.
+2026-04-15 12:42:01,546 | INFO | lakeice_ncde | Saved val windows for split 'xiaoxingkai_transfer_daily12': 41 samples -> S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\windows_xiaoxingkai_transfer_daily12\xiaoxingkai_transfer_daily12\val_windows.pt
+2026-04-15 12:42:01,550 | INFO | lakeice_ncde | Building test windows for split 'xiaoxingkai_transfer_daily12': 37 rows across 1 lakes.
+2026-04-15 12:42:01,702 | INFO | lakeice_ncde | Window progress for split 'test': 1/1 lakes processed, 36 windows built.
+2026-04-15 12:42:01,720 | INFO | lakeice_ncde | Saved test windows for split 'xiaoxingkai_transfer_daily12': 36 samples -> S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\windows_xiaoxingkai_transfer_daily12\xiaoxingkai_transfer_daily12\test_windows.pt
+2026-04-15 12:42:01,832 | INFO | lakeice_ncde | Balanced windows with train cap=160 and val cap=20
+2026-04-15 12:42:02,688 | INFO | lakeice_ncde | Computing hermite coefficients for 284 windows from S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\windows_xiaoxingkai_transfer_daily12\xiaoxingkai_transfer_daily12\train_windows.pt
+2026-04-15 12:42:02,691 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 1/284 windows processed.
+2026-04-15 12:42:02,701 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 28/284 windows processed.
+2026-04-15 12:42:02,714 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 56/284 windows processed.
+2026-04-15 12:42:02,725 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 84/284 windows processed.
+2026-04-15 12:42:02,737 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 112/284 windows processed.
+2026-04-15 12:42:02,749 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 140/284 windows processed.
+2026-04-15 12:42:02,761 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 168/284 windows processed.
+2026-04-15 12:42:02,773 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 196/284 windows processed.
+2026-04-15 12:42:02,786 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 224/284 windows processed.
+2026-04-15 12:42:02,795 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 252/284 windows processed.
+2026-04-15 12:42:02,807 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 280/284 windows processed.
+2026-04-15 12:42:02,810 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 284/284 windows processed.
+2026-04-15 12:42:02,871 | INFO | lakeice_ncde | Computing hermite coefficients for 41 windows from S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\windows_xiaoxingkai_transfer_daily12\xiaoxingkai_transfer_daily12\val_windows.pt
+2026-04-15 12:42:02,874 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 1/41 windows processed.
+2026-04-15 12:42:02,876 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 4/41 windows processed.
+2026-04-15 12:42:02,879 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 8/41 windows processed.
+2026-04-15 12:42:02,882 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 12/41 windows processed.
+2026-04-15 12:42:02,885 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 16/41 windows processed.
+2026-04-15 12:42:02,888 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 20/41 windows processed.
+2026-04-15 12:42:02,892 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 24/41 windows processed.
+2026-04-15 12:42:02,895 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 28/41 windows processed.
+2026-04-15 12:42:02,898 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 32/41 windows processed.
+2026-04-15 12:42:02,901 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 36/41 windows processed.
+2026-04-15 12:42:02,904 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 40/41 windows processed.
+2026-04-15 12:42:02,906 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 41/41 windows processed.
+2026-04-15 12:42:02,933 | INFO | lakeice_ncde | Computing hermite coefficients for 36 windows from S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\windows_xiaoxingkai_transfer_daily12\xiaoxingkai_transfer_daily12\test_windows.pt
+2026-04-15 12:42:02,936 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 1/36 windows processed.
+2026-04-15 12:42:02,938 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 3/36 windows processed.
+2026-04-15 12:42:02,940 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 6/36 windows processed.
+2026-04-15 12:42:02,943 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 9/36 windows processed.
+2026-04-15 12:42:02,946 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 12/36 windows processed.
+2026-04-15 12:42:02,949 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 15/36 windows processed.
+2026-04-15 12:42:02,951 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 18/36 windows processed.
+2026-04-15 12:42:02,954 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 21/36 windows processed.
+2026-04-15 12:42:02,958 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 24/36 windows processed.
+2026-04-15 12:42:02,960 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 27/36 windows processed.
+2026-04-15 12:42:02,963 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 30/36 windows processed.
+2026-04-15 12:42:02,965 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 33/36 windows processed.
+2026-04-15 12:42:02,969 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 36/36 windows processed.
+2026-04-15 12:42:02,983 | INFO | lakeice_ncde | Saved 3 coefficient bundle(s) under S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\coeffs_xiaoxingkai_transfer_daily12
+2026-04-15 12:42:03,058 | INFO | lakeice_ncde | Data summary | train=284 | val=41 | test=36 | input_channels=12 | batch_parallel=True
+2026-04-15 12:42:05,885 | INFO | lakeice_ncde | Training on cuda | train_batches=5 | val_batches=1 | test_batches=1
+2026-04-15 12:42:05,887 | INFO | lakeice_ncde | Epoch 1/120 started.
+2026-04-15 12:42:06,280 | INFO | lakeice_ncde | Epoch 1/120 | train batch 1/5 | batch_loss=0.04662075 | running_loss=0.04662075
+2026-04-15 12:42:06,334 | INFO | lakeice_ncde | Epoch 1/120 | train batch 2/5 | batch_loss=0.04487751 | running_loss=0.04574913
+2026-04-15 12:42:06,421 | INFO | lakeice_ncde | Epoch 1/120 | train batch 3/5 | batch_loss=0.04914866 | running_loss=0.04688231
+2026-04-15 12:42:06,515 | INFO | lakeice_ncde | Epoch 1/120 | train batch 4/5 | batch_loss=0.04012077 | running_loss=0.04519192
+2026-04-15 12:42:06,602 | INFO | lakeice_ncde | Epoch 1/120 | train batch 5/5 | batch_loss=0.04706483 | running_loss=0.04556650
+2026-04-15 12:42:06,620 | INFO | lakeice_ncde | Epoch 1 complete | train_loss=0.04556650 | val_loss=0.80765675 | val_rmse=0.89869725 | val_mae=0.58099625 | val_r2=-11.88141924
+2026-04-15 12:42:06,645 | INFO | lakeice_ncde | Epoch 2/120 started.
+2026-04-15 12:42:06,728 | INFO | lakeice_ncde | Epoch 2/120 | train batch 1/5 | batch_loss=0.04618359 | running_loss=0.04618359
+2026-04-15 12:42:06,790 | INFO | lakeice_ncde | Epoch 2/120 | train batch 2/5 | batch_loss=0.05417316 | running_loss=0.05017838
+2026-04-15 12:42:06,880 | INFO | lakeice_ncde | Epoch 2/120 | train batch 3/5 | batch_loss=0.03565976 | running_loss=0.04533884
+2026-04-15 12:42:06,957 | INFO | lakeice_ncde | Epoch 2/120 | train batch 4/5 | batch_loss=0.04142597 | running_loss=0.04436062
+2026-04-15 12:42:07,019 | INFO | lakeice_ncde | Epoch 2/120 | train batch 5/5 | batch_loss=0.04426631 | running_loss=0.04434176
+2026-04-15 12:42:07,039 | INFO | lakeice_ncde | Epoch 2 complete | train_loss=0.04434176 | val_loss=0.72470516 | val_rmse=0.85129616 | val_mae=0.51774626 | val_r2=-10.55841378
+2026-04-15 12:42:07,062 | INFO | lakeice_ncde | Epoch 3/120 started.
+2026-04-15 12:42:07,193 | INFO | lakeice_ncde | Epoch 3/120 | train batch 1/5 | batch_loss=0.03251251 | running_loss=0.03251251
+2026-04-15 12:42:07,251 | INFO | lakeice_ncde | Epoch 3/120 | train batch 2/5 | batch_loss=0.03593558 | running_loss=0.03422404
+2026-04-15 12:42:07,335 | INFO | lakeice_ncde | Epoch 3/120 | train batch 3/5 | batch_loss=0.04777684 | running_loss=0.03874164
+2026-04-15 12:42:07,416 | INFO | lakeice_ncde | Epoch 3/120 | train batch 4/5 | batch_loss=0.02845682 | running_loss=0.03617044
+2026-04-15 12:42:07,473 | INFO | lakeice_ncde | Epoch 3/120 | train batch 5/5 | batch_loss=0.01398254 | running_loss=0.03173286
+2026-04-15 12:42:07,492 | INFO | lakeice_ncde | Epoch 3 complete | train_loss=0.03173286 | val_loss=1.02055094 | val_rmse=1.01022321 | val_mae=0.53876061 | val_r2=-15.27689536
+2026-04-15 12:42:07,502 | INFO | lakeice_ncde | Epoch 4/120 started.
+2026-04-15 12:42:07,579 | INFO | lakeice_ncde | Epoch 4/120 | train batch 1/5 | batch_loss=0.03661174 | running_loss=0.03661174
+2026-04-15 12:42:07,687 | INFO | lakeice_ncde | Epoch 4/120 | train batch 2/5 | batch_loss=0.02489782 | running_loss=0.03075478
+2026-04-15 12:42:07,776 | INFO | lakeice_ncde | Epoch 4/120 | train batch 3/5 | batch_loss=0.02545414 | running_loss=0.02898790
+2026-04-15 12:42:07,856 | INFO | lakeice_ncde | Epoch 4/120 | train batch 4/5 | batch_loss=0.03688910 | running_loss=0.03096320
+2026-04-15 12:42:07,918 | INFO | lakeice_ncde | Epoch 4/120 | train batch 5/5 | batch_loss=0.01946146 | running_loss=0.02866285
+2026-04-15 12:42:07,936 | INFO | lakeice_ncde | Epoch 4 complete | train_loss=0.02866285 | val_loss=0.71186380 | val_rmse=0.84372021 | val_mae=0.48797524 | val_r2=-10.35360528
+2026-04-15 12:42:07,959 | INFO | lakeice_ncde | Epoch 5/120 started.
+2026-04-15 12:42:08,050 | INFO | lakeice_ncde | Epoch 5/120 | train batch 1/5 | batch_loss=0.03070849 | running_loss=0.03070849
+2026-04-15 12:42:08,141 | INFO | lakeice_ncde | Epoch 5/120 | train batch 2/5 | batch_loss=0.02307846 | running_loss=0.02689347
+2026-04-15 12:42:08,218 | INFO | lakeice_ncde | Epoch 5/120 | train batch 3/5 | batch_loss=0.02604877 | running_loss=0.02661191
+2026-04-15 12:42:08,275 | INFO | lakeice_ncde | Epoch 5/120 | train batch 4/5 | batch_loss=0.01916500 | running_loss=0.02475018
+2026-04-15 12:42:08,375 | INFO | lakeice_ncde | Epoch 5/120 | train batch 5/5 | batch_loss=0.02450852 | running_loss=0.02470185
+2026-04-15 12:42:08,395 | INFO | lakeice_ncde | Epoch 5 complete | train_loss=0.02470185 | val_loss=0.37682760 | val_rmse=0.61386285 | val_mae=0.41968653 | val_r2=-5.01007080
+2026-04-15 12:42:08,418 | INFO | lakeice_ncde | Epoch 6/120 started.
+2026-04-15 12:42:08,504 | INFO | lakeice_ncde | Epoch 6/120 | train batch 1/5 | batch_loss=0.02076664 | running_loss=0.02076664
+2026-04-15 12:42:08,601 | INFO | lakeice_ncde | Epoch 6/120 | train batch 2/5 | batch_loss=0.02257277 | running_loss=0.02166970
+2026-04-15 12:42:08,720 | INFO | lakeice_ncde | Epoch 6/120 | train batch 3/5 | batch_loss=0.01742193 | running_loss=0.02025378
+2026-04-15 12:42:08,823 | INFO | lakeice_ncde | Epoch 6/120 | train batch 4/5 | batch_loss=0.03221866 | running_loss=0.02324500
+2026-04-15 12:42:08,929 | INFO | lakeice_ncde | Epoch 6/120 | train batch 5/5 | batch_loss=0.01904540 | running_loss=0.02240508
+2026-04-15 12:42:08,949 | INFO | lakeice_ncde | Epoch 6 complete | train_loss=0.02240508 | val_loss=0.26419354 | val_rmse=0.51399761 | val_mae=0.38224999 | val_r2=-3.21365606
+2026-04-15 12:42:08,974 | INFO | lakeice_ncde | Epoch 7/120 started.
+2026-04-15 12:42:09,061 | INFO | lakeice_ncde | Epoch 7/120 | train batch 1/5 | batch_loss=0.01548388 | running_loss=0.01548388
+2026-04-15 12:42:09,146 | INFO | lakeice_ncde | Epoch 7/120 | train batch 2/5 | batch_loss=0.02701064 | running_loss=0.02124726
+2026-04-15 12:42:09,252 | INFO | lakeice_ncde | Epoch 7/120 | train batch 3/5 | batch_loss=0.02710182 | running_loss=0.02319878
+2026-04-15 12:42:09,368 | INFO | lakeice_ncde | Epoch 7/120 | train batch 4/5 | batch_loss=0.02349937 | running_loss=0.02327393
+2026-04-15 12:42:09,445 | INFO | lakeice_ncde | Epoch 7/120 | train batch 5/5 | batch_loss=0.02374727 | running_loss=0.02336860
+2026-04-15 12:42:09,463 | INFO | lakeice_ncde | Epoch 7 complete | train_loss=0.02336860 | val_loss=0.20628201 | val_rmse=0.45418280 | val_mae=0.34759717 | val_r2=-2.29001778
+2026-04-15 12:42:09,486 | INFO | lakeice_ncde | Epoch 8/120 started.
+2026-04-15 12:42:09,575 | INFO | lakeice_ncde | Epoch 8/120 | train batch 1/5 | batch_loss=0.01770422 | running_loss=0.01770422
+2026-04-15 12:42:09,661 | INFO | lakeice_ncde | Epoch 8/120 | train batch 2/5 | batch_loss=0.02611736 | running_loss=0.02191079
+2026-04-15 12:42:09,736 | INFO | lakeice_ncde | Epoch 8/120 | train batch 3/5 | batch_loss=0.02634996 | running_loss=0.02339051
+2026-04-15 12:42:09,856 | INFO | lakeice_ncde | Epoch 8/120 | train batch 4/5 | batch_loss=0.03908241 | running_loss=0.02731349
+2026-04-15 12:42:09,906 | INFO | lakeice_ncde | Epoch 8/120 | train batch 5/5 | batch_loss=0.02937827 | running_loss=0.02772644
+2026-04-15 12:42:09,927 | INFO | lakeice_ncde | Epoch 8 complete | train_loss=0.02772644 | val_loss=0.20208135 | val_rmse=0.44953460 | val_mae=0.34203366 | val_r2=-2.22302093
+2026-04-15 12:42:09,951 | INFO | lakeice_ncde | Epoch 9/120 started.
+2026-04-15 12:42:10,013 | INFO | lakeice_ncde | Epoch 9/120 | train batch 1/5 | batch_loss=0.02075189 | running_loss=0.02075189
+2026-04-15 12:42:10,085 | INFO | lakeice_ncde | Epoch 9/120 | train batch 2/5 | batch_loss=0.01994633 | running_loss=0.02034911
+2026-04-15 12:42:10,165 | INFO | lakeice_ncde | Epoch 9/120 | train batch 3/5 | batch_loss=0.01672599 | running_loss=0.01914141
+2026-04-15 12:42:10,266 | INFO | lakeice_ncde | Epoch 9/120 | train batch 4/5 | batch_loss=0.01991248 | running_loss=0.01933418
+2026-04-15 12:42:10,387 | INFO | lakeice_ncde | Epoch 9/120 | train batch 5/5 | batch_loss=0.02777001 | running_loss=0.02102134
+2026-04-15 12:42:10,404 | INFO | lakeice_ncde | Epoch 9 complete | train_loss=0.02102134 | val_loss=0.17517293 | val_rmse=0.41853665 | val_mae=0.32678211 | val_r2=-1.79385505
+2026-04-15 12:42:10,428 | INFO | lakeice_ncde | Epoch 10/120 started.
+2026-04-15 12:42:10,521 | INFO | lakeice_ncde | Epoch 10/120 | train batch 1/5 | batch_loss=0.02318777 | running_loss=0.02318777
+2026-04-15 12:42:10,656 | INFO | lakeice_ncde | Epoch 10/120 | train batch 2/5 | batch_loss=0.02053989 | running_loss=0.02186383
+2026-04-15 12:42:10,728 | INFO | lakeice_ncde | Epoch 10/120 | train batch 3/5 | batch_loss=0.01607670 | running_loss=0.01993479
+2026-04-15 12:42:10,776 | INFO | lakeice_ncde | Epoch 10/120 | train batch 4/5 | batch_loss=0.01652299 | running_loss=0.01908184
+2026-04-15 12:42:10,863 | INFO | lakeice_ncde | Epoch 10/120 | train batch 5/5 | batch_loss=0.01935970 | running_loss=0.01913741
+2026-04-15 12:42:10,881 | INFO | lakeice_ncde | Epoch 10 complete | train_loss=0.01913741 | val_loss=0.17671320 | val_rmse=0.42037269 | val_mae=0.32428784 | val_r2=-1.81842111
+2026-04-15 12:42:10,891 | INFO | lakeice_ncde | Epoch 11/120 started.
+2026-04-15 12:42:10,962 | INFO | lakeice_ncde | Epoch 11/120 | train batch 1/5 | batch_loss=0.01534181 | running_loss=0.01534181
+2026-04-15 12:42:11,045 | INFO | lakeice_ncde | Epoch 11/120 | train batch 2/5 | batch_loss=0.02080079 | running_loss=0.01807130
+2026-04-15 12:42:11,152 | INFO | lakeice_ncde | Epoch 11/120 | train batch 3/5 | batch_loss=0.01989408 | running_loss=0.01867889
+2026-04-15 12:42:11,222 | INFO | lakeice_ncde | Epoch 11/120 | train batch 4/5 | batch_loss=0.02005767 | running_loss=0.01902359
+2026-04-15 12:42:11,290 | INFO | lakeice_ncde | Epoch 11/120 | train batch 5/5 | batch_loss=0.01532447 | running_loss=0.01828376
+2026-04-15 12:42:11,308 | INFO | lakeice_ncde | Epoch 11 complete | train_loss=0.01828376 | val_loss=0.19333721 | val_rmse=0.43970127 | val_mae=0.33156800 | val_r2=-2.08355948
+2026-04-15 12:42:11,318 | INFO | lakeice_ncde | Epoch 12/120 started.
+2026-04-15 12:42:11,426 | INFO | lakeice_ncde | Epoch 12/120 | train batch 1/5 | batch_loss=0.01949908 | running_loss=0.01949908
+2026-04-15 12:42:11,509 | INFO | lakeice_ncde | Epoch 12/120 | train batch 2/5 | batch_loss=0.01605264 | running_loss=0.01777586
+2026-04-15 12:42:11,568 | INFO | lakeice_ncde | Epoch 12/120 | train batch 3/5 | batch_loss=0.01537152 | running_loss=0.01697441
+2026-04-15 12:42:11,665 | INFO | lakeice_ncde | Epoch 12/120 | train batch 4/5 | batch_loss=0.01905780 | running_loss=0.01749526
+2026-04-15 12:42:11,727 | INFO | lakeice_ncde | Epoch 12/120 | train batch 5/5 | batch_loss=0.01447738 | running_loss=0.01689168
+2026-04-15 12:42:11,745 | INFO | lakeice_ncde | Epoch 12 complete | train_loss=0.01689168 | val_loss=0.17770464 | val_rmse=0.42155028 | val_mae=0.32356991 | val_r2=-1.83423363
+2026-04-15 12:42:11,754 | INFO | lakeice_ncde | Epoch 13/120 started.
+2026-04-15 12:42:11,861 | INFO | lakeice_ncde | Epoch 13/120 | train batch 1/5 | batch_loss=0.02166077 | running_loss=0.02166077
+2026-04-15 12:42:11,934 | INFO | lakeice_ncde | Epoch 13/120 | train batch 2/5 | batch_loss=0.01573012 | running_loss=0.01869544
+2026-04-15 12:42:12,032 | INFO | lakeice_ncde | Epoch 13/120 | train batch 3/5 | batch_loss=0.02001295 | running_loss=0.01913461
+2026-04-15 12:42:12,099 | INFO | lakeice_ncde | Epoch 13/120 | train batch 4/5 | batch_loss=0.01699765 | running_loss=0.01860037
+2026-04-15 12:42:12,146 | INFO | lakeice_ncde | Epoch 13/120 | train batch 5/5 | batch_loss=0.01215889 | running_loss=0.01731208
+2026-04-15 12:42:12,166 | INFO | lakeice_ncde | Epoch 13 complete | train_loss=0.01731208 | val_loss=0.13370579 | val_rmse=0.36565802 | val_mae=0.30129368 | val_r2=-1.13249042
+2026-04-15 12:42:12,191 | INFO | lakeice_ncde | Epoch 14/120 started.
+2026-04-15 12:42:12,272 | INFO | lakeice_ncde | Epoch 14/120 | train batch 1/5 | batch_loss=0.01483995 | running_loss=0.01483995
+2026-04-15 12:42:12,355 | INFO | lakeice_ncde | Epoch 14/120 | train batch 2/5 | batch_loss=0.01684877 | running_loss=0.01584436
+2026-04-15 12:42:12,475 | INFO | lakeice_ncde | Epoch 14/120 | train batch 3/5 | batch_loss=0.01939451 | running_loss=0.01702774
+2026-04-15 12:42:12,557 | INFO | lakeice_ncde | Epoch 14/120 | train batch 4/5 | batch_loss=0.01831162 | running_loss=0.01734871
+2026-04-15 12:42:12,623 | INFO | lakeice_ncde | Epoch 14/120 | train batch 5/5 | batch_loss=0.02028326 | running_loss=0.01793562
+2026-04-15 12:42:12,644 | INFO | lakeice_ncde | Epoch 14 complete | train_loss=0.01793562 | val_loss=0.11698675 | val_rmse=0.34203326 | val_mae=0.29199191 | val_r2=-0.86583639
+2026-04-15 12:42:12,669 | INFO | lakeice_ncde | Epoch 15/120 started.
+2026-04-15 12:42:12,752 | INFO | lakeice_ncde | Epoch 15/120 | train batch 1/5 | batch_loss=0.01586588 | running_loss=0.01586588
+2026-04-15 12:42:12,854 | INFO | lakeice_ncde | Epoch 15/120 | train batch 2/5 | batch_loss=0.01618133 | running_loss=0.01602361
+2026-04-15 12:42:12,923 | INFO | lakeice_ncde | Epoch 15/120 | train batch 3/5 | batch_loss=0.01394588 | running_loss=0.01533103
+2026-04-15 12:42:13,049 | INFO | lakeice_ncde | Epoch 15/120 | train batch 4/5 | batch_loss=0.01770029 | running_loss=0.01592335
+2026-04-15 12:42:13,085 | INFO | lakeice_ncde | Epoch 15/120 | train batch 5/5 | batch_loss=0.01421790 | running_loss=0.01558226
+2026-04-15 12:42:13,105 | INFO | lakeice_ncde | Epoch 15 complete | train_loss=0.01558226 | val_loss=0.12247964 | val_rmse=0.34997091 | val_mae=0.29660881 | val_r2=-0.95344312
+2026-04-15 12:42:13,115 | INFO | lakeice_ncde | Epoch 16/120 started.
+2026-04-15 12:42:13,184 | INFO | lakeice_ncde | Epoch 16/120 | train batch 1/5 | batch_loss=0.01716695 | running_loss=0.01716695
+2026-04-15 12:42:13,288 | INFO | lakeice_ncde | Epoch 16/120 | train batch 2/5 | batch_loss=0.01294368 | running_loss=0.01505531
+2026-04-15 12:42:13,373 | INFO | lakeice_ncde | Epoch 16/120 | train batch 3/5 | batch_loss=0.01477022 | running_loss=0.01496028
+2026-04-15 12:42:13,452 | INFO | lakeice_ncde | Epoch 16/120 | train batch 4/5 | batch_loss=0.01574060 | running_loss=0.01515536
+2026-04-15 12:42:13,519 | INFO | lakeice_ncde | Epoch 16/120 | train batch 5/5 | batch_loss=0.01417430 | running_loss=0.01495915
+2026-04-15 12:42:13,537 | INFO | lakeice_ncde | Epoch 16 complete | train_loss=0.01495915 | val_loss=0.12005660 | val_rmse=0.34649185 | val_mae=0.29499434 | val_r2=-0.91479782
+2026-04-15 12:42:13,546 | INFO | lakeice_ncde | Epoch 17/120 started.
+2026-04-15 12:42:13,632 | INFO | lakeice_ncde | Epoch 17/120 | train batch 1/5 | batch_loss=0.01531290 | running_loss=0.01531290
+2026-04-15 12:42:13,703 | INFO | lakeice_ncde | Epoch 17/120 | train batch 2/5 | batch_loss=0.01504091 | running_loss=0.01517690
+2026-04-15 12:42:13,803 | INFO | lakeice_ncde | Epoch 17/120 | train batch 3/5 | batch_loss=0.01470557 | running_loss=0.01501979
+2026-04-15 12:42:13,907 | INFO | lakeice_ncde | Epoch 17/120 | train batch 4/5 | batch_loss=0.01929421 | running_loss=0.01608840
+2026-04-15 12:42:13,993 | INFO | lakeice_ncde | Epoch 17/120 | train batch 5/5 | batch_loss=0.01845050 | running_loss=0.01656082
+2026-04-15 12:42:14,012 | INFO | lakeice_ncde | Epoch 17 complete | train_loss=0.01656082 | val_loss=0.11023775 | val_rmse=0.33202070 | val_mae=0.28397592 | val_r2=-0.75819572
+2026-04-15 12:42:14,040 | INFO | lakeice_ncde | Epoch 18/120 started.
+2026-04-15 12:42:14,130 | INFO | lakeice_ncde | Epoch 18/120 | train batch 1/5 | batch_loss=0.01167630 | running_loss=0.01167630
+2026-04-15 12:42:14,200 | INFO | lakeice_ncde | Epoch 18/120 | train batch 2/5 | batch_loss=0.01847373 | running_loss=0.01507501
+2026-04-15 12:42:14,296 | INFO | lakeice_ncde | Epoch 18/120 | train batch 3/5 | batch_loss=0.01659499 | running_loss=0.01558167
+2026-04-15 12:42:14,388 | INFO | lakeice_ncde | Epoch 18/120 | train batch 4/5 | batch_loss=0.02721386 | running_loss=0.01848972
+2026-04-15 12:42:14,459 | INFO | lakeice_ncde | Epoch 18/120 | train batch 5/5 | batch_loss=0.01901126 | running_loss=0.01859403
+2026-04-15 12:42:14,479 | INFO | lakeice_ncde | Epoch 18 complete | train_loss=0.01859403 | val_loss=0.11638145 | val_rmse=0.34114725 | val_mae=0.28757642 | val_r2=-0.85618233
+2026-04-15 12:42:14,489 | INFO | lakeice_ncde | Epoch 19/120 started.
+2026-04-15 12:42:14,615 | INFO | lakeice_ncde | Epoch 19/120 | train batch 1/5 | batch_loss=0.01799887 | running_loss=0.01799887
+2026-04-15 12:42:14,704 | INFO | lakeice_ncde | Epoch 19/120 | train batch 2/5 | batch_loss=0.01676276 | running_loss=0.01738081
+2026-04-15 12:42:14,775 | INFO | lakeice_ncde | Epoch 19/120 | train batch 3/5 | batch_loss=0.01702446 | running_loss=0.01726203
+2026-04-15 12:42:14,879 | INFO | lakeice_ncde | Epoch 19/120 | train batch 4/5 | batch_loss=0.01447546 | running_loss=0.01656539
+2026-04-15 12:42:14,974 | INFO | lakeice_ncde | Epoch 19/120 | train batch 5/5 | batch_loss=0.01436271 | running_loss=0.01612485
+2026-04-15 12:42:14,994 | INFO | lakeice_ncde | Epoch 19 complete | train_loss=0.01612485 | val_loss=0.17196796 | val_rmse=0.41469019 | val_mae=0.32342129 | val_r2=-1.74273860
+2026-04-15 12:42:15,002 | INFO | lakeice_ncde | Epoch 20/120 started.
+2026-04-15 12:42:15,080 | INFO | lakeice_ncde | Epoch 20/120 | train batch 1/5 | batch_loss=0.01290447 | running_loss=0.01290447
+2026-04-15 12:42:15,209 | INFO | lakeice_ncde | Epoch 20/120 | train batch 2/5 | batch_loss=0.01378929 | running_loss=0.01334688
+2026-04-15 12:42:15,284 | INFO | lakeice_ncde | Epoch 20/120 | train batch 3/5 | batch_loss=0.01310698 | running_loss=0.01326691
+2026-04-15 12:42:15,385 | INFO | lakeice_ncde | Epoch 20/120 | train batch 4/5 | batch_loss=0.02845142 | running_loss=0.01706304
+2026-04-15 12:42:15,444 | INFO | lakeice_ncde | Epoch 20/120 | train batch 5/5 | batch_loss=0.01264321 | running_loss=0.01617907
+2026-04-15 12:42:15,466 | INFO | lakeice_ncde | Epoch 20 complete | train_loss=0.01617907 | val_loss=0.18037463 | val_rmse=0.42470535 | val_mae=0.33089714 | val_r2=-1.87681774
+2026-04-15 12:42:15,476 | INFO | lakeice_ncde | Epoch 21/120 started.
+2026-04-15 12:42:15,578 | INFO | lakeice_ncde | Epoch 21/120 | train batch 1/5 | batch_loss=0.01412449 | running_loss=0.01412449
+2026-04-15 12:42:15,674 | INFO | lakeice_ncde | Epoch 21/120 | train batch 2/5 | batch_loss=0.01377172 | running_loss=0.01394811
+2026-04-15 12:42:15,769 | INFO | lakeice_ncde | Epoch 21/120 | train batch 3/5 | batch_loss=0.01289455 | running_loss=0.01359692
+2026-04-15 12:42:15,857 | INFO | lakeice_ncde | Epoch 21/120 | train batch 4/5 | batch_loss=0.01331038 | running_loss=0.01352529
+2026-04-15 12:42:15,920 | INFO | lakeice_ncde | Epoch 21/120 | train batch 5/5 | batch_loss=0.01922567 | running_loss=0.01466536
+2026-04-15 12:42:15,939 | INFO | lakeice_ncde | Epoch 21 complete | train_loss=0.01466536 | val_loss=0.15669557 | val_rmse=0.39584791 | val_mae=0.32012471 | val_r2=-1.49915735
+2026-04-15 12:42:15,949 | INFO | lakeice_ncde | Epoch 22/120 started.
+2026-04-15 12:42:16,023 | INFO | lakeice_ncde | Epoch 22/120 | train batch 1/5 | batch_loss=0.01025048 | running_loss=0.01025048
+2026-04-15 12:42:16,090 | INFO | lakeice_ncde | Epoch 22/120 | train batch 2/5 | batch_loss=0.01302791 | running_loss=0.01163920
+2026-04-15 12:42:16,196 | INFO | lakeice_ncde | Epoch 22/120 | train batch 3/5 | batch_loss=0.01592467 | running_loss=0.01306769
+2026-04-15 12:42:16,291 | INFO | lakeice_ncde | Epoch 22/120 | train batch 4/5 | batch_loss=0.01515971 | running_loss=0.01359069
+2026-04-15 12:42:16,337 | INFO | lakeice_ncde | Epoch 22/120 | train batch 5/5 | batch_loss=0.01432798 | running_loss=0.01373815
+2026-04-15 12:42:16,363 | INFO | lakeice_ncde | Epoch 22 complete | train_loss=0.01373815 | val_loss=0.14784217 | val_rmse=0.38450249 | val_mae=0.31354226 | val_r2=-1.35795332
+2026-04-15 12:42:16,373 | INFO | lakeice_ncde | Epoch 23/120 started.
+2026-04-15 12:42:16,473 | INFO | lakeice_ncde | Epoch 23/120 | train batch 1/5 | batch_loss=0.01484185 | running_loss=0.01484185
+2026-04-15 12:42:16,563 | INFO | lakeice_ncde | Epoch 23/120 | train batch 2/5 | batch_loss=0.01527153 | running_loss=0.01505669
+2026-04-15 12:42:16,658 | INFO | lakeice_ncde | Epoch 23/120 | train batch 3/5 | batch_loss=0.01278525 | running_loss=0.01429955
+2026-04-15 12:42:16,745 | INFO | lakeice_ncde | Epoch 23/120 | train batch 4/5 | batch_loss=0.01373957 | running_loss=0.01415955
+2026-04-15 12:42:16,820 | INFO | lakeice_ncde | Epoch 23/120 | train batch 5/5 | batch_loss=0.01114359 | running_loss=0.01355636
+2026-04-15 12:42:16,838 | INFO | lakeice_ncde | Epoch 23 complete | train_loss=0.01355636 | val_loss=0.13947780 | val_rmse=0.37346726 | val_mae=0.30887574 | val_r2=-1.22454892
+2026-04-15 12:42:16,848 | INFO | lakeice_ncde | Epoch 24/120 started.
+2026-04-15 12:42:16,928 | INFO | lakeice_ncde | Epoch 24/120 | train batch 1/5 | batch_loss=0.01314390 | running_loss=0.01314390
+2026-04-15 12:42:17,056 | INFO | lakeice_ncde | Epoch 24/120 | train batch 2/5 | batch_loss=0.01384446 | running_loss=0.01349418
+2026-04-15 12:42:17,236 | INFO | lakeice_ncde | Epoch 24/120 | train batch 3/5 | batch_loss=0.01374038 | running_loss=0.01357624
+2026-04-15 12:42:17,322 | INFO | lakeice_ncde | Epoch 24/120 | train batch 4/5 | batch_loss=0.01384931 | running_loss=0.01364451
+2026-04-15 12:42:17,402 | INFO | lakeice_ncde | Epoch 24/120 | train batch 5/5 | batch_loss=0.01077816 | running_loss=0.01307124
+2026-04-15 12:42:17,420 | INFO | lakeice_ncde | Epoch 24 complete | train_loss=0.01307124 | val_loss=0.13433128 | val_rmse=0.36651231 | val_mae=0.30594680 | val_r2=-1.14246644
+2026-04-15 12:42:17,429 | INFO | lakeice_ncde | Epoch 25/120 started.
+2026-04-15 12:42:17,543 | INFO | lakeice_ncde | Epoch 25/120 | train batch 1/5 | batch_loss=0.01084704 | running_loss=0.01084704
+2026-04-15 12:42:17,625 | INFO | lakeice_ncde | Epoch 25/120 | train batch 2/5 | batch_loss=0.01089168 | running_loss=0.01086936
+2026-04-15 12:42:17,715 | INFO | lakeice_ncde | Epoch 25/120 | train batch 3/5 | batch_loss=0.01428923 | running_loss=0.01200932
+2026-04-15 12:42:17,804 | INFO | lakeice_ncde | Epoch 25/120 | train batch 4/5 | batch_loss=0.01327185 | running_loss=0.01232495
+2026-04-15 12:42:17,882 | INFO | lakeice_ncde | Epoch 25/120 | train batch 5/5 | batch_loss=0.01315412 | running_loss=0.01249079
+2026-04-15 12:42:17,902 | INFO | lakeice_ncde | Epoch 25 complete | train_loss=0.01249079 | val_loss=0.12669987 | val_rmse=0.35594925 | val_mae=0.29845832 | val_r2=-1.02075211
+2026-04-15 12:42:17,912 | INFO | lakeice_ncde | Epoch 26/120 started.
+2026-04-15 12:42:18,005 | INFO | lakeice_ncde | Epoch 26/120 | train batch 1/5 | batch_loss=0.01606088 | running_loss=0.01606088
+2026-04-15 12:42:18,091 | INFO | lakeice_ncde | Epoch 26/120 | train batch 2/5 | batch_loss=0.01457470 | running_loss=0.01531779
+2026-04-15 12:42:18,194 | INFO | lakeice_ncde | Epoch 26/120 | train batch 3/5 | batch_loss=0.01074537 | running_loss=0.01379365
+2026-04-15 12:42:18,286 | INFO | lakeice_ncde | Epoch 26/120 | train batch 4/5 | batch_loss=0.01040848 | running_loss=0.01294736
+2026-04-15 12:42:18,374 | INFO | lakeice_ncde | Epoch 26/120 | train batch 5/5 | batch_loss=0.00776027 | running_loss=0.01190994
+2026-04-15 12:42:18,393 | INFO | lakeice_ncde | Epoch 26 complete | train_loss=0.01190994 | val_loss=0.11852702 | val_rmse=0.34427753 | val_mae=0.28921582 | val_r2=-0.89040235
+2026-04-15 12:42:18,402 | INFO | lakeice_ncde | Epoch 27/120 started.
+2026-04-15 12:42:18,485 | INFO | lakeice_ncde | Epoch 27/120 | train batch 1/5 | batch_loss=0.01368089 | running_loss=0.01368089
+2026-04-15 12:42:18,573 | INFO | lakeice_ncde | Epoch 27/120 | train batch 2/5 | batch_loss=0.01099802 | running_loss=0.01233945
+2026-04-15 12:42:18,665 | INFO | lakeice_ncde | Epoch 27/120 | train batch 3/5 | batch_loss=0.00977612 | running_loss=0.01148501
+2026-04-15 12:42:18,768 | INFO | lakeice_ncde | Epoch 27/120 | train batch 4/5 | batch_loss=0.01139623 | running_loss=0.01146281
+2026-04-15 12:42:18,876 | INFO | lakeice_ncde | Epoch 27/120 | train batch 5/5 | batch_loss=0.01721325 | running_loss=0.01261290
+2026-04-15 12:42:18,906 | INFO | lakeice_ncde | Epoch 27 complete | train_loss=0.01261290 | val_loss=0.11939034 | val_rmse=0.34552907 | val_mae=0.28823115 | val_r2=-0.90417157
+2026-04-15 12:42:18,915 | INFO | lakeice_ncde | Epoch 28/120 started.
+2026-04-15 12:42:18,975 | INFO | lakeice_ncde | Epoch 28/120 | train batch 1/5 | batch_loss=0.01072600 | running_loss=0.01072600
+2026-04-15 12:42:19,056 | INFO | lakeice_ncde | Epoch 28/120 | train batch 2/5 | batch_loss=0.01369236 | running_loss=0.01220918
+2026-04-15 12:42:19,137 | INFO | lakeice_ncde | Epoch 28/120 | train batch 3/5 | batch_loss=0.01131283 | running_loss=0.01191040
+2026-04-15 12:42:19,252 | INFO | lakeice_ncde | Epoch 28/120 | train batch 4/5 | batch_loss=0.01198353 | running_loss=0.01192868
+2026-04-15 12:42:19,307 | INFO | lakeice_ncde | Epoch 28/120 | train batch 5/5 | batch_loss=0.01252612 | running_loss=0.01204817
+2026-04-15 12:42:19,326 | INFO | lakeice_ncde | Epoch 28 complete | train_loss=0.01204817 | val_loss=0.12172569 | val_rmse=0.34889209 | val_mae=0.28904804 | val_r2=-0.94141834
+2026-04-15 12:42:19,336 | INFO | lakeice_ncde | Epoch 29/120 started.
+2026-04-15 12:42:19,443 | INFO | lakeice_ncde | Epoch 29/120 | train batch 1/5 | batch_loss=0.01144662 | running_loss=0.01144662
+2026-04-15 12:42:19,537 | INFO | lakeice_ncde | Epoch 29/120 | train batch 2/5 | batch_loss=0.01405489 | running_loss=0.01275075
+2026-04-15 12:42:19,598 | INFO | lakeice_ncde | Epoch 29/120 | train batch 3/5 | batch_loss=0.01164682 | running_loss=0.01238278
+2026-04-15 12:42:19,675 | INFO | lakeice_ncde | Epoch 29/120 | train batch 4/5 | batch_loss=0.01287517 | running_loss=0.01250587
+2026-04-15 12:42:19,728 | INFO | lakeice_ncde | Epoch 29/120 | train batch 5/5 | batch_loss=0.01018898 | running_loss=0.01204250
+2026-04-15 12:42:19,747 | INFO | lakeice_ncde | Epoch 29 complete | train_loss=0.01204250 | val_loss=0.12979736 | val_rmse=0.36027401 | val_mae=0.29290856 | val_r2=-1.07015449
+2026-04-15 12:42:19,757 | INFO | lakeice_ncde | Epoch 30/120 started.
+2026-04-15 12:42:19,834 | INFO | lakeice_ncde | Epoch 30/120 | train batch 1/5 | batch_loss=0.01094141 | running_loss=0.01094141
+2026-04-15 12:42:19,918 | INFO | lakeice_ncde | Epoch 30/120 | train batch 2/5 | batch_loss=0.01113710 | running_loss=0.01103926
+2026-04-15 12:42:20,021 | INFO | lakeice_ncde | Epoch 30/120 | train batch 3/5 | batch_loss=0.01195125 | running_loss=0.01134326
+2026-04-15 12:42:20,077 | INFO | lakeice_ncde | Epoch 30/120 | train batch 4/5 | batch_loss=0.01126488 | running_loss=0.01132366
+2026-04-15 12:42:20,136 | INFO | lakeice_ncde | Epoch 30/120 | train batch 5/5 | batch_loss=0.01015782 | running_loss=0.01109049
+2026-04-15 12:42:20,157 | INFO | lakeice_ncde | Epoch 30 complete | train_loss=0.01109049 | val_loss=0.13840372 | val_rmse=0.37202651 | val_mae=0.29620442 | val_r2=-1.20741837
+2026-04-15 12:42:20,168 | INFO | lakeice_ncde | Epoch 31/120 started.
+2026-04-15 12:42:20,232 | INFO | lakeice_ncde | Epoch 31/120 | train batch 1/5 | batch_loss=0.01329544 | running_loss=0.01329544
+2026-04-15 12:42:20,309 | INFO | lakeice_ncde | Epoch 31/120 | train batch 2/5 | batch_loss=0.01020812 | running_loss=0.01175178
+2026-04-15 12:42:20,386 | INFO | lakeice_ncde | Epoch 31/120 | train batch 3/5 | batch_loss=0.01076771 | running_loss=0.01142376
+2026-04-15 12:42:20,489 | INFO | lakeice_ncde | Epoch 31/120 | train batch 4/5 | batch_loss=0.01163438 | running_loss=0.01147641
+2026-04-15 12:42:20,570 | INFO | lakeice_ncde | Epoch 31/120 | train batch 5/5 | batch_loss=0.01359719 | running_loss=0.01190057
+2026-04-15 12:42:20,590 | INFO | lakeice_ncde | Epoch 31 complete | train_loss=0.01190057 | val_loss=0.14262467 | val_rmse=0.37765682 | val_mae=0.29722657 | val_r2=-1.27473884
+2026-04-15 12:42:20,599 | INFO | lakeice_ncde | Epoch 32/120 started.
+2026-04-15 12:42:20,675 | INFO | lakeice_ncde | Epoch 32/120 | train batch 1/5 | batch_loss=0.01060474 | running_loss=0.01060474
+2026-04-15 12:42:20,778 | INFO | lakeice_ncde | Epoch 32/120 | train batch 2/5 | batch_loss=0.01359929 | running_loss=0.01210201
+2026-04-15 12:42:20,875 | INFO | lakeice_ncde | Epoch 32/120 | train batch 3/5 | batch_loss=0.01018894 | running_loss=0.01146432
+2026-04-15 12:42:20,971 | INFO | lakeice_ncde | Epoch 32/120 | train batch 4/5 | batch_loss=0.00989960 | running_loss=0.01107314
+2026-04-15 12:42:21,043 | INFO | lakeice_ncde | Epoch 32/120 | train batch 5/5 | batch_loss=0.01673104 | running_loss=0.01220472
+2026-04-15 12:42:21,062 | INFO | lakeice_ncde | Epoch 32 complete | train_loss=0.01220472 | val_loss=0.13826029 | val_rmse=0.37183369 | val_mae=0.29488243 | val_r2=-1.20513078
+2026-04-15 12:42:21,073 | INFO | lakeice_ncde | Epoch 33/120 started.
+2026-04-15 12:42:21,137 | INFO | lakeice_ncde | Epoch 33/120 | train batch 1/5 | batch_loss=0.00930286 | running_loss=0.00930286
+2026-04-15 12:42:21,249 | INFO | lakeice_ncde | Epoch 33/120 | train batch 2/5 | batch_loss=0.01373434 | running_loss=0.01151860
+2026-04-15 12:42:21,343 | INFO | lakeice_ncde | Epoch 33/120 | train batch 3/5 | batch_loss=0.00915929 | running_loss=0.01073216
+2026-04-15 12:42:21,433 | INFO | lakeice_ncde | Epoch 33/120 | train batch 4/5 | batch_loss=0.01119386 | running_loss=0.01084759
+2026-04-15 12:42:21,483 | INFO | lakeice_ncde | Epoch 33/120 | train batch 5/5 | batch_loss=0.01932725 | running_loss=0.01254352
+2026-04-15 12:42:21,508 | INFO | lakeice_ncde | Epoch 33 complete | train_loss=0.01254352 | val_loss=0.12535610 | val_rmse=0.35405664 | val_mae=0.28648210 | val_r2=-0.99932027
+2026-04-15 12:42:21,517 | INFO | lakeice_ncde | Epoch 34/120 started.
+2026-04-15 12:42:21,626 | INFO | lakeice_ncde | Epoch 34/120 | train batch 1/5 | batch_loss=0.01343028 | running_loss=0.01343028
+2026-04-15 12:42:21,700 | INFO | lakeice_ncde | Epoch 34/120 | train batch 2/5 | batch_loss=0.01107770 | running_loss=0.01225399
+2026-04-15 12:42:21,829 | INFO | lakeice_ncde | Epoch 34/120 | train batch 3/5 | batch_loss=0.01090006 | running_loss=0.01180268
+2026-04-15 12:42:21,922 | INFO | lakeice_ncde | Epoch 34/120 | train batch 4/5 | batch_loss=0.01143962 | running_loss=0.01171191
+2026-04-15 12:42:22,012 | INFO | lakeice_ncde | Epoch 34/120 | train batch 5/5 | batch_loss=0.02098300 | running_loss=0.01356613
+2026-04-15 12:42:22,037 | INFO | lakeice_ncde | Epoch 34 complete | train_loss=0.01356613 | val_loss=0.11524269 | val_rmse=0.33947414 | val_mae=0.27837144 | val_r2=-0.83802021
+2026-04-15 12:42:22,047 | INFO | lakeice_ncde | Epoch 35/120 started.
+2026-04-15 12:42:22,122 | INFO | lakeice_ncde | Epoch 35/120 | train batch 1/5 | batch_loss=0.01314473 | running_loss=0.01314473
+2026-04-15 12:42:22,213 | INFO | lakeice_ncde | Epoch 35/120 | train batch 2/5 | batch_loss=0.01297853 | running_loss=0.01306163
+2026-04-15 12:42:22,338 | INFO | lakeice_ncde | Epoch 35/120 | train batch 3/5 | batch_loss=0.01033337 | running_loss=0.01215221
+2026-04-15 12:42:22,457 | INFO | lakeice_ncde | Epoch 35/120 | train batch 4/5 | batch_loss=0.01063157 | running_loss=0.01177205
+2026-04-15 12:42:22,489 | INFO | lakeice_ncde | Epoch 35/120 | train batch 5/5 | batch_loss=0.01061300 | running_loss=0.01154024
+2026-04-15 12:42:22,510 | INFO | lakeice_ncde | Epoch 35 complete | train_loss=0.01154024 | val_loss=0.11129754 | val_rmse=0.33361287 | val_mae=0.27756462 | val_r2=-0.77509855
+2026-04-15 12:42:22,520 | INFO | lakeice_ncde | Epoch 36/120 started.
+2026-04-15 12:42:22,601 | INFO | lakeice_ncde | Epoch 36/120 | train batch 1/5 | batch_loss=0.00996040 | running_loss=0.00996040
+2026-04-15 12:42:22,672 | INFO | lakeice_ncde | Epoch 36/120 | train batch 2/5 | batch_loss=0.01209467 | running_loss=0.01102754
+2026-04-15 12:42:22,753 | INFO | lakeice_ncde | Epoch 36/120 | train batch 3/5 | batch_loss=0.00987151 | running_loss=0.01064220
+2026-04-15 12:42:22,859 | INFO | lakeice_ncde | Epoch 36/120 | train batch 4/5 | batch_loss=0.01278374 | running_loss=0.01117758
+2026-04-15 12:42:22,919 | INFO | lakeice_ncde | Epoch 36/120 | train batch 5/5 | batch_loss=0.01675716 | running_loss=0.01229350
+2026-04-15 12:42:22,937 | INFO | lakeice_ncde | Epoch 36 complete | train_loss=0.01229350 | val_loss=0.11005210 | val_rmse=0.33174101 | val_mae=0.27802380 | val_r2=-0.75523473
+2026-04-15 12:42:22,960 | INFO | lakeice_ncde | Epoch 37/120 started.
+2026-04-15 12:42:23,044 | INFO | lakeice_ncde | Epoch 37/120 | train batch 1/5 | batch_loss=0.01277381 | running_loss=0.01277381
+2026-04-15 12:42:23,131 | INFO | lakeice_ncde | Epoch 37/120 | train batch 2/5 | batch_loss=0.01056260 | running_loss=0.01166821
+2026-04-15 12:42:23,198 | INFO | lakeice_ncde | Epoch 37/120 | train batch 3/5 | batch_loss=0.00924178 | running_loss=0.01085940
+2026-04-15 12:42:23,275 | INFO | lakeice_ncde | Epoch 37/120 | train batch 4/5 | batch_loss=0.01169570 | running_loss=0.01106847
+2026-04-15 12:42:23,384 | INFO | lakeice_ncde | Epoch 37/120 | train batch 5/5 | batch_loss=0.01454312 | running_loss=0.01176340
+2026-04-15 12:42:23,406 | INFO | lakeice_ncde | Epoch 37 complete | train_loss=0.01176340 | val_loss=0.11006687 | val_rmse=0.33176328 | val_mae=0.27873221 | val_r2=-0.75547042
+2026-04-15 12:42:23,416 | INFO | lakeice_ncde | Epoch 38/120 started.
+2026-04-15 12:42:23,522 | INFO | lakeice_ncde | Epoch 38/120 | train batch 1/5 | batch_loss=0.00906455 | running_loss=0.00906455
+2026-04-15 12:42:23,623 | INFO | lakeice_ncde | Epoch 38/120 | train batch 2/5 | batch_loss=0.01281444 | running_loss=0.01093949
+2026-04-15 12:42:23,708 | INFO | lakeice_ncde | Epoch 38/120 | train batch 3/5 | batch_loss=0.01165030 | running_loss=0.01117643
+2026-04-15 12:42:23,841 | INFO | lakeice_ncde | Epoch 38/120 | train batch 4/5 | batch_loss=0.01105783 | running_loss=0.01114678
+2026-04-15 12:42:23,914 | INFO | lakeice_ncde | Epoch 38/120 | train batch 5/5 | batch_loss=0.00979017 | running_loss=0.01087546
+2026-04-15 12:42:23,968 | INFO | lakeice_ncde | Epoch 38 complete | train_loss=0.01087546 | val_loss=0.11027369 | val_rmse=0.33207483 | val_mae=0.27859898 | val_r2=-0.75876897
+2026-04-15 12:42:23,977 | INFO | lakeice_ncde | Epoch 39/120 started.
+2026-04-15 12:42:24,080 | INFO | lakeice_ncde | Epoch 39/120 | train batch 1/5 | batch_loss=0.01055130 | running_loss=0.01055130
+2026-04-15 12:42:24,195 | INFO | lakeice_ncde | Epoch 39/120 | train batch 2/5 | batch_loss=0.01123914 | running_loss=0.01089522
+2026-04-15 12:42:24,273 | INFO | lakeice_ncde | Epoch 39/120 | train batch 3/5 | batch_loss=0.01124414 | running_loss=0.01101153
+2026-04-15 12:42:24,350 | INFO | lakeice_ncde | Epoch 39/120 | train batch 4/5 | batch_loss=0.01173662 | running_loss=0.01119280
+2026-04-15 12:42:24,411 | INFO | lakeice_ncde | Epoch 39/120 | train batch 5/5 | batch_loss=0.01449559 | running_loss=0.01185336
+2026-04-15 12:42:24,435 | INFO | lakeice_ncde | Epoch 39 complete | train_loss=0.01185336 | val_loss=0.10953810 | val_rmse=0.33096540 | val_mae=0.27824913 | val_r2=-0.74703693
+2026-04-15 12:42:24,462 | INFO | lakeice_ncde | Epoch 40/120 started.
+2026-04-15 12:42:24,543 | INFO | lakeice_ncde | Epoch 40/120 | train batch 1/5 | batch_loss=0.00835594 | running_loss=0.00835594
+2026-04-15 12:42:24,646 | INFO | lakeice_ncde | Epoch 40/120 | train batch 2/5 | batch_loss=0.01157594 | running_loss=0.00996594
+2026-04-15 12:42:24,735 | INFO | lakeice_ncde | Epoch 40/120 | train batch 3/5 | batch_loss=0.01073435 | running_loss=0.01022208
+2026-04-15 12:42:24,799 | INFO | lakeice_ncde | Epoch 40/120 | train batch 4/5 | batch_loss=0.00789958 | running_loss=0.00964145
+2026-04-15 12:42:24,903 | INFO | lakeice_ncde | Epoch 40/120 | train batch 5/5 | batch_loss=0.01201338 | running_loss=0.01011584
+2026-04-15 12:42:24,921 | INFO | lakeice_ncde | Epoch 40 complete | train_loss=0.01011584 | val_loss=0.10956830 | val_rmse=0.33101103 | val_mae=0.27898837 | val_r2=-0.74751862
+2026-04-15 12:42:24,931 | INFO | lakeice_ncde | Epoch 41/120 started.
+2026-04-15 12:42:25,051 | INFO | lakeice_ncde | Epoch 41/120 | train batch 1/5 | batch_loss=0.01145803 | running_loss=0.01145803
+2026-04-15 12:42:25,157 | INFO | lakeice_ncde | Epoch 41/120 | train batch 2/5 | batch_loss=0.01004291 | running_loss=0.01075047
+2026-04-15 12:42:25,206 | INFO | lakeice_ncde | Epoch 41/120 | train batch 3/5 | batch_loss=0.01071971 | running_loss=0.01074021
+2026-04-15 12:42:25,309 | INFO | lakeice_ncde | Epoch 41/120 | train batch 4/5 | batch_loss=0.01151267 | running_loss=0.01093333
+2026-04-15 12:42:25,382 | INFO | lakeice_ncde | Epoch 41/120 | train batch 5/5 | batch_loss=0.00852080 | running_loss=0.01045082
+2026-04-15 12:42:25,401 | INFO | lakeice_ncde | Epoch 41 complete | train_loss=0.01045082 | val_loss=0.10703825 | val_rmse=0.32716701 | val_mae=0.27781840 | val_r2=-0.70716654
+2026-04-15 12:42:25,425 | INFO | lakeice_ncde | Epoch 42/120 started.
+2026-04-15 12:42:25,529 | INFO | lakeice_ncde | Epoch 42/120 | train batch 1/5 | batch_loss=0.01009921 | running_loss=0.01009921
+2026-04-15 12:42:25,612 | INFO | lakeice_ncde | Epoch 42/120 | train batch 2/5 | batch_loss=0.01085278 | running_loss=0.01047600
+2026-04-15 12:42:25,722 | INFO | lakeice_ncde | Epoch 42/120 | train batch 3/5 | batch_loss=0.01023726 | running_loss=0.01039642
+2026-04-15 12:42:25,834 | INFO | lakeice_ncde | Epoch 42/120 | train batch 4/5 | batch_loss=0.01001997 | running_loss=0.01030231
+2026-04-15 12:42:25,902 | INFO | lakeice_ncde | Epoch 42/120 | train batch 5/5 | batch_loss=0.01355439 | running_loss=0.01095272
+2026-04-15 12:42:25,920 | INFO | lakeice_ncde | Epoch 42 complete | train_loss=0.01095272 | val_loss=0.10691285 | val_rmse=0.32697530 | val_mae=0.27776250 | val_r2=-0.70516642
+2026-04-15 12:42:25,942 | INFO | lakeice_ncde | Epoch 43/120 started.
+2026-04-15 12:42:26,042 | INFO | lakeice_ncde | Epoch 43/120 | train batch 1/5 | batch_loss=0.00939630 | running_loss=0.00939630
+2026-04-15 12:42:26,149 | INFO | lakeice_ncde | Epoch 43/120 | train batch 2/5 | batch_loss=0.01041861 | running_loss=0.00990746
+2026-04-15 12:42:26,245 | INFO | lakeice_ncde | Epoch 43/120 | train batch 3/5 | batch_loss=0.01178374 | running_loss=0.01053288
+2026-04-15 12:42:26,347 | INFO | lakeice_ncde | Epoch 43/120 | train batch 4/5 | batch_loss=0.00950462 | running_loss=0.01027582
+2026-04-15 12:42:26,396 | INFO | lakeice_ncde | Epoch 43/120 | train batch 5/5 | batch_loss=0.01027269 | running_loss=0.01027519
+2026-04-15 12:42:26,414 | INFO | lakeice_ncde | Epoch 43 complete | train_loss=0.01027519 | val_loss=0.10778433 | val_rmse=0.32830524 | val_mae=0.27798453 | val_r2=-0.71906586
+2026-04-15 12:42:26,424 | INFO | lakeice_ncde | Epoch 44/120 started.
+2026-04-15 12:42:26,514 | INFO | lakeice_ncde | Epoch 44/120 | train batch 1/5 | batch_loss=0.01199162 | running_loss=0.01199162
+2026-04-15 12:42:26,614 | INFO | lakeice_ncde | Epoch 44/120 | train batch 2/5 | batch_loss=0.01092808 | running_loss=0.01145985
+2026-04-15 12:42:26,715 | INFO | lakeice_ncde | Epoch 44/120 | train batch 3/5 | batch_loss=0.01278403 | running_loss=0.01190124
+2026-04-15 12:42:26,786 | INFO | lakeice_ncde | Epoch 44/120 | train batch 4/5 | batch_loss=0.00975954 | running_loss=0.01136582
+2026-04-15 12:42:26,881 | INFO | lakeice_ncde | Epoch 44/120 | train batch 5/5 | batch_loss=0.01046080 | running_loss=0.01118481
+2026-04-15 12:42:26,898 | INFO | lakeice_ncde | Epoch 44 complete | train_loss=0.01118481 | val_loss=0.10956177 | val_rmse=0.33100116 | val_mae=0.27852278 | val_r2=-0.74741448
+2026-04-15 12:42:26,907 | INFO | lakeice_ncde | Epoch 45/120 started.
+2026-04-15 12:42:26,997 | INFO | lakeice_ncde | Epoch 45/120 | train batch 1/5 | batch_loss=0.01205141 | running_loss=0.01205141
+2026-04-15 12:42:27,081 | INFO | lakeice_ncde | Epoch 45/120 | train batch 2/5 | batch_loss=0.01129707 | running_loss=0.01167424
+2026-04-15 12:42:27,166 | INFO | lakeice_ncde | Epoch 45/120 | train batch 3/5 | batch_loss=0.01161168 | running_loss=0.01165339
+2026-04-15 12:42:27,263 | INFO | lakeice_ncde | Epoch 45/120 | train batch 4/5 | batch_loss=0.00819591 | running_loss=0.01078902
+2026-04-15 12:42:27,321 | INFO | lakeice_ncde | Epoch 45/120 | train batch 5/5 | batch_loss=0.01207480 | running_loss=0.01104617
+2026-04-15 12:42:27,347 | INFO | lakeice_ncde | Epoch 45 complete | train_loss=0.01104617 | val_loss=0.11143036 | val_rmse=0.33381187 | val_mae=0.27916848 | val_r2=-0.77721687
+2026-04-15 12:42:27,360 | INFO | lakeice_ncde | Epoch 46/120 started.
+2026-04-15 12:42:27,423 | INFO | lakeice_ncde | Epoch 46/120 | train batch 1/5 | batch_loss=0.00792955 | running_loss=0.00792955
+2026-04-15 12:42:27,493 | INFO | lakeice_ncde | Epoch 46/120 | train batch 2/5 | batch_loss=0.01150966 | running_loss=0.00971960
+2026-04-15 12:42:27,585 | INFO | lakeice_ncde | Epoch 46/120 | train batch 3/5 | batch_loss=0.01211004 | running_loss=0.01051642
+2026-04-15 12:42:27,693 | INFO | lakeice_ncde | Epoch 46/120 | train batch 4/5 | batch_loss=0.01162131 | running_loss=0.01079264
+2026-04-15 12:42:27,743 | INFO | lakeice_ncde | Epoch 46/120 | train batch 5/5 | batch_loss=0.01065367 | running_loss=0.01076485
+2026-04-15 12:42:27,763 | INFO | lakeice_ncde | Epoch 46 complete | train_loss=0.01076485 | val_loss=0.11228624 | val_rmse=0.33509139 | val_mae=0.27868337 | val_r2=-0.79086741
+2026-04-15 12:42:27,773 | INFO | lakeice_ncde | Epoch 47/120 started.
+2026-04-15 12:42:27,855 | INFO | lakeice_ncde | Epoch 47/120 | train batch 1/5 | batch_loss=0.00945090 | running_loss=0.00945090
+2026-04-15 12:42:27,963 | INFO | lakeice_ncde | Epoch 47/120 | train batch 2/5 | batch_loss=0.01085538 | running_loss=0.01015314
+2026-04-15 12:42:28,043 | INFO | lakeice_ncde | Epoch 47/120 | train batch 3/5 | batch_loss=0.00898713 | running_loss=0.00976447
+2026-04-15 12:42:28,122 | INFO | lakeice_ncde | Epoch 47/120 | train batch 4/5 | batch_loss=0.01003996 | running_loss=0.00983334
+2026-04-15 12:42:28,211 | INFO | lakeice_ncde | Epoch 47/120 | train batch 5/5 | batch_loss=0.01161571 | running_loss=0.01018982
+2026-04-15 12:42:28,229 | INFO | lakeice_ncde | Epoch 47 complete | train_loss=0.01018982 | val_loss=0.11469324 | val_rmse=0.33866390 | val_mae=0.27942816 | val_r2=-0.82925688
+2026-04-15 12:42:28,238 | INFO | lakeice_ncde | Epoch 48/120 started.
+2026-04-15 12:42:28,318 | INFO | lakeice_ncde | Epoch 48/120 | train batch 1/5 | batch_loss=0.01140647 | running_loss=0.01140647
+2026-04-15 12:42:28,436 | INFO | lakeice_ncde | Epoch 48/120 | train batch 2/5 | batch_loss=0.00896648 | running_loss=0.01018648
+2026-04-15 12:42:28,518 | INFO | lakeice_ncde | Epoch 48/120 | train batch 3/5 | batch_loss=0.00974157 | running_loss=0.01003817
+2026-04-15 12:42:28,597 | INFO | lakeice_ncde | Epoch 48/120 | train batch 4/5 | batch_loss=0.01153541 | running_loss=0.01041248
+2026-04-15 12:42:28,647 | INFO | lakeice_ncde | Epoch 48/120 | train batch 5/5 | batch_loss=0.00799967 | running_loss=0.00992992
+2026-04-15 12:42:28,675 | INFO | lakeice_ncde | Epoch 48 complete | train_loss=0.00992992 | val_loss=0.11579121 | val_rmse=0.34028107 | val_mae=0.27998588 | val_r2=-0.84676854
+2026-04-15 12:42:28,683 | INFO | lakeice_ncde | Epoch 49/120 started.
+2026-04-15 12:42:28,757 | INFO | lakeice_ncde | Epoch 49/120 | train batch 1/5 | batch_loss=0.01036033 | running_loss=0.01036033
+2026-04-15 12:42:28,819 | INFO | lakeice_ncde | Epoch 49/120 | train batch 2/5 | batch_loss=0.00979844 | running_loss=0.01007938
+2026-04-15 12:42:28,899 | INFO | lakeice_ncde | Epoch 49/120 | train batch 3/5 | batch_loss=0.01034644 | running_loss=0.01016840
+2026-04-15 12:42:28,963 | INFO | lakeice_ncde | Epoch 49/120 | train batch 4/5 | batch_loss=0.01031565 | running_loss=0.01020521
+2026-04-15 12:42:29,056 | INFO | lakeice_ncde | Epoch 49/120 | train batch 5/5 | batch_loss=0.01235068 | running_loss=0.01063431
+2026-04-15 12:42:29,075 | INFO | lakeice_ncde | Epoch 49 complete | train_loss=0.01063431 | val_loss=0.11526218 | val_rmse=0.33950285 | val_mae=0.28001357 | val_r2=-0.83833109
+2026-04-15 12:42:29,086 | INFO | lakeice_ncde | Epoch 50/120 started.
+2026-04-15 12:42:29,183 | INFO | lakeice_ncde | Epoch 50/120 | train batch 1/5 | batch_loss=0.01036866 | running_loss=0.01036866
+2026-04-15 12:42:29,275 | INFO | lakeice_ncde | Epoch 50/120 | train batch 2/5 | batch_loss=0.00938631 | running_loss=0.00987749
+2026-04-15 12:42:29,357 | INFO | lakeice_ncde | Epoch 50/120 | train batch 3/5 | batch_loss=0.00984273 | running_loss=0.00986590
+2026-04-15 12:42:29,481 | INFO | lakeice_ncde | Epoch 50/120 | train batch 4/5 | batch_loss=0.01333104 | running_loss=0.01073219
+2026-04-15 12:42:29,598 | INFO | lakeice_ncde | Epoch 50/120 | train batch 5/5 | batch_loss=0.01010441 | running_loss=0.01060663
+2026-04-15 12:42:29,621 | INFO | lakeice_ncde | Epoch 50 complete | train_loss=0.01060663 | val_loss=0.11518835 | val_rmse=0.33939410 | val_mae=0.28186626 | val_r2=-0.83715356
+2026-04-15 12:42:29,631 | INFO | lakeice_ncde | Epoch 51/120 started.
+2026-04-15 12:42:29,764 | INFO | lakeice_ncde | Epoch 51/120 | train batch 1/5 | batch_loss=0.01206555 | running_loss=0.01206555
+2026-04-15 12:42:29,871 | INFO | lakeice_ncde | Epoch 51/120 | train batch 2/5 | batch_loss=0.00881667 | running_loss=0.01044111
+2026-04-15 12:42:29,959 | INFO | lakeice_ncde | Epoch 51/120 | train batch 3/5 | batch_loss=0.00990593 | running_loss=0.01026272
+2026-04-15 12:42:30,032 | INFO | lakeice_ncde | Epoch 51/120 | train batch 4/5 | batch_loss=0.00877435 | running_loss=0.00989063
+2026-04-15 12:42:30,087 | INFO | lakeice_ncde | Epoch 51/120 | train batch 5/5 | batch_loss=0.01101076 | running_loss=0.01011465
+2026-04-15 12:42:30,114 | INFO | lakeice_ncde | Epoch 51 complete | train_loss=0.01011465 | val_loss=0.11585653 | val_rmse=0.34037704 | val_mae=0.28268502 | val_r2=-0.84781033
+2026-04-15 12:42:30,125 | INFO | lakeice_ncde | Epoch 52/120 started.
+2026-04-15 12:42:30,202 | INFO | lakeice_ncde | Epoch 52/120 | train batch 1/5 | batch_loss=0.01114326 | running_loss=0.01114326
+2026-04-15 12:42:30,319 | INFO | lakeice_ncde | Epoch 52/120 | train batch 2/5 | batch_loss=0.01024325 | running_loss=0.01069326
+2026-04-15 12:42:30,449 | INFO | lakeice_ncde | Epoch 52/120 | train batch 3/5 | batch_loss=0.00738361 | running_loss=0.00959004
+2026-04-15 12:42:30,540 | INFO | lakeice_ncde | Epoch 52/120 | train batch 4/5 | batch_loss=0.01182004 | running_loss=0.01014754
+2026-04-15 12:42:30,612 | INFO | lakeice_ncde | Epoch 52/120 | train batch 5/5 | batch_loss=0.01425381 | running_loss=0.01096879
+2026-04-15 12:42:30,638 | INFO | lakeice_ncde | Epoch 52 complete | train_loss=0.01096879 | val_loss=0.11603271 | val_rmse=0.34063575 | val_mae=0.28237293 | val_r2=-0.85062036
+2026-04-15 12:42:30,652 | INFO | lakeice_ncde | Epoch 53/120 started.
+2026-04-15 12:42:30,753 | INFO | lakeice_ncde | Epoch 53/120 | train batch 1/5 | batch_loss=0.01136022 | running_loss=0.01136022
+2026-04-15 12:42:30,874 | INFO | lakeice_ncde | Epoch 53/120 | train batch 2/5 | batch_loss=0.01060408 | running_loss=0.01098215
+2026-04-15 12:42:30,957 | INFO | lakeice_ncde | Epoch 53/120 | train batch 3/5 | batch_loss=0.01089180 | running_loss=0.01095203
+2026-04-15 12:42:31,027 | INFO | lakeice_ncde | Epoch 53/120 | train batch 4/5 | batch_loss=0.01149932 | running_loss=0.01108885
+2026-04-15 12:42:31,071 | INFO | lakeice_ncde | Epoch 53/120 | train batch 5/5 | batch_loss=0.00893990 | running_loss=0.01065906
+2026-04-15 12:42:31,094 | INFO | lakeice_ncde | Epoch 53 complete | train_loss=0.01065906 | val_loss=0.11560201 | val_rmse=0.34000296 | val_mae=0.28199099 | val_r2=-0.84375107
+2026-04-15 12:42:31,103 | INFO | lakeice_ncde | Epoch 54/120 started.
+2026-04-15 12:42:31,188 | INFO | lakeice_ncde | Epoch 54/120 | train batch 1/5 | batch_loss=0.01045108 | running_loss=0.01045108
+2026-04-15 12:42:31,261 | INFO | lakeice_ncde | Epoch 54/120 | train batch 2/5 | batch_loss=0.01102168 | running_loss=0.01073638
+2026-04-15 12:42:31,350 | INFO | lakeice_ncde | Epoch 54/120 | train batch 3/5 | batch_loss=0.01029202 | running_loss=0.01058826
+2026-04-15 12:42:31,432 | INFO | lakeice_ncde | Epoch 54/120 | train batch 4/5 | batch_loss=0.01065477 | running_loss=0.01060489
+2026-04-15 12:42:31,481 | INFO | lakeice_ncde | Epoch 54/120 | train batch 5/5 | batch_loss=0.01348456 | running_loss=0.01118082
+2026-04-15 12:42:31,501 | INFO | lakeice_ncde | Epoch 54 complete | train_loss=0.01118082 | val_loss=0.11536131 | val_rmse=0.33964881 | val_mae=0.28166861 | val_r2=-0.83991209
+2026-04-15 12:42:31,510 | INFO | lakeice_ncde | Epoch 55/120 started.
+2026-04-15 12:42:31,610 | INFO | lakeice_ncde | Epoch 55/120 | train batch 1/5 | batch_loss=0.01211359 | running_loss=0.01211359
+2026-04-15 12:42:31,705 | INFO | lakeice_ncde | Epoch 55/120 | train batch 2/5 | batch_loss=0.01092068 | running_loss=0.01151713
+2026-04-15 12:42:31,799 | INFO | lakeice_ncde | Epoch 55/120 | train batch 3/5 | batch_loss=0.00936560 | running_loss=0.01079996
+2026-04-15 12:42:31,878 | INFO | lakeice_ncde | Epoch 55/120 | train batch 4/5 | batch_loss=0.00939368 | running_loss=0.01044839
+2026-04-15 12:42:31,937 | INFO | lakeice_ncde | Epoch 55/120 | train batch 5/5 | batch_loss=0.01184368 | running_loss=0.01072745
+2026-04-15 12:42:31,955 | INFO | lakeice_ncde | Epoch 55 complete | train_loss=0.01072745 | val_loss=0.11644707 | val_rmse=0.34124341 | val_mae=0.28183540 | val_r2=-0.85722890
+2026-04-15 12:42:31,965 | INFO | lakeice_ncde | Epoch 56/120 started.
+2026-04-15 12:42:32,037 | INFO | lakeice_ncde | Epoch 56/120 | train batch 1/5 | batch_loss=0.01069136 | running_loss=0.01069136
+2026-04-15 12:42:32,154 | INFO | lakeice_ncde | Epoch 56/120 | train batch 2/5 | batch_loss=0.01135283 | running_loss=0.01102209
+2026-04-15 12:42:32,231 | INFO | lakeice_ncde | Epoch 56/120 | train batch 3/5 | batch_loss=0.01027536 | running_loss=0.01077318
+2026-04-15 12:42:32,309 | INFO | lakeice_ncde | Epoch 56/120 | train batch 4/5 | batch_loss=0.01018507 | running_loss=0.01062615
+2026-04-15 12:42:32,382 | INFO | lakeice_ncde | Epoch 56/120 | train batch 5/5 | batch_loss=0.01078591 | running_loss=0.01065811
+2026-04-15 12:42:32,405 | INFO | lakeice_ncde | Epoch 56 complete | train_loss=0.01065811 | val_loss=0.11517629 | val_rmse=0.33937633 | val_mae=0.28082312 | val_r2=-0.83696120
+2026-04-15 12:42:32,416 | INFO | lakeice_ncde | Epoch 57/120 started.
+2026-04-15 12:42:32,488 | INFO | lakeice_ncde | Epoch 57/120 | train batch 1/5 | batch_loss=0.01063044 | running_loss=0.01063044
+2026-04-15 12:42:32,580 | INFO | lakeice_ncde | Epoch 57/120 | train batch 2/5 | batch_loss=0.00895560 | running_loss=0.00979302
+2026-04-15 12:42:32,668 | INFO | lakeice_ncde | Epoch 57/120 | train batch 3/5 | batch_loss=0.01241151 | running_loss=0.01066585
+2026-04-15 12:42:32,772 | INFO | lakeice_ncde | Epoch 57/120 | train batch 4/5 | batch_loss=0.01176672 | running_loss=0.01094107
+2026-04-15 12:42:32,859 | INFO | lakeice_ncde | Epoch 57/120 | train batch 5/5 | batch_loss=0.01301885 | running_loss=0.01135662
+2026-04-15 12:42:32,882 | INFO | lakeice_ncde | Epoch 57 complete | train_loss=0.01135662 | val_loss=0.11426792 | val_rmse=0.33803538 | val_mae=0.28013146 | val_r2=-0.82247344
+2026-04-15 12:42:32,894 | INFO | lakeice_ncde | Epoch 58/120 started.
+2026-04-15 12:42:32,990 | INFO | lakeice_ncde | Epoch 58/120 | train batch 1/5 | batch_loss=0.01040446 | running_loss=0.01040446
+2026-04-15 12:42:33,089 | INFO | lakeice_ncde | Epoch 58/120 | train batch 2/5 | batch_loss=0.01200856 | running_loss=0.01120651
+2026-04-15 12:42:33,182 | INFO | lakeice_ncde | Epoch 58/120 | train batch 3/5 | batch_loss=0.01083448 | running_loss=0.01108250
+2026-04-15 12:42:33,260 | INFO | lakeice_ncde | Epoch 58/120 | train batch 4/5 | batch_loss=0.00929791 | running_loss=0.01063636
+2026-04-15 12:42:33,309 | INFO | lakeice_ncde | Epoch 58/120 | train batch 5/5 | batch_loss=0.00981384 | running_loss=0.01047185
+2026-04-15 12:42:33,327 | INFO | lakeice_ncde | Epoch 58 complete | train_loss=0.01047185 | val_loss=0.11316934 | val_rmse=0.33640651 | val_mae=0.27957538 | val_r2=-0.80495206
+2026-04-15 12:42:33,337 | INFO | lakeice_ncde | Epoch 59/120 started.
+2026-04-15 12:42:33,442 | INFO | lakeice_ncde | Epoch 59/120 | train batch 1/5 | batch_loss=0.00961006 | running_loss=0.00961006
+2026-04-15 12:42:33,537 | INFO | lakeice_ncde | Epoch 59/120 | train batch 2/5 | batch_loss=0.00977246 | running_loss=0.00969126
+2026-04-15 12:42:33,607 | INFO | lakeice_ncde | Epoch 59/120 | train batch 3/5 | batch_loss=0.01129419 | running_loss=0.01022557
+2026-04-15 12:42:33,701 | INFO | lakeice_ncde | Epoch 59/120 | train batch 4/5 | batch_loss=0.01333842 | running_loss=0.01100378
+2026-04-15 12:42:33,766 | INFO | lakeice_ncde | Epoch 59/120 | train batch 5/5 | batch_loss=0.00967905 | running_loss=0.01073883
+2026-04-15 12:42:33,787 | INFO | lakeice_ncde | Epoch 59 complete | train_loss=0.01073883 | val_loss=0.11181895 | val_rmse=0.33439341 | val_mae=0.27932803 | val_r2=-0.78341458
+2026-04-15 12:42:33,798 | INFO | lakeice_ncde | Epoch 60/120 started.
+2026-04-15 12:42:33,934 | INFO | lakeice_ncde | Epoch 60/120 | train batch 1/5 | batch_loss=0.00880688 | running_loss=0.00880688
+2026-04-15 12:42:34,032 | INFO | lakeice_ncde | Epoch 60/120 | train batch 2/5 | batch_loss=0.00977145 | running_loss=0.00928916
+2026-04-15 12:42:34,111 | INFO | lakeice_ncde | Epoch 60/120 | train batch 3/5 | batch_loss=0.01023372 | running_loss=0.00960402
+2026-04-15 12:42:34,215 | INFO | lakeice_ncde | Epoch 60/120 | train batch 4/5 | batch_loss=0.01187085 | running_loss=0.01017072
+2026-04-15 12:42:34,277 | INFO | lakeice_ncde | Epoch 60/120 | train batch 5/5 | batch_loss=0.00813854 | running_loss=0.00976429
+2026-04-15 12:42:34,296 | INFO | lakeice_ncde | Epoch 60 complete | train_loss=0.00976429 | val_loss=0.11085775 | val_rmse=0.33295307 | val_mae=0.27899759 | val_r2=-0.76808417
+2026-04-15 12:42:34,305 | INFO | lakeice_ncde | Epoch 61/120 started.
+2026-04-15 12:42:34,375 | INFO | lakeice_ncde | Epoch 61/120 | train batch 1/5 | batch_loss=0.01048279 | running_loss=0.01048279
+2026-04-15 12:42:34,466 | INFO | lakeice_ncde | Epoch 61/120 | train batch 2/5 | batch_loss=0.00894699 | running_loss=0.00971489
+2026-04-15 12:42:34,593 | INFO | lakeice_ncde | Epoch 61/120 | train batch 3/5 | batch_loss=0.00981955 | running_loss=0.00974978
+2026-04-15 12:42:34,669 | INFO | lakeice_ncde | Epoch 61/120 | train batch 4/5 | batch_loss=0.01134304 | running_loss=0.01014809
+2026-04-15 12:42:34,746 | INFO | lakeice_ncde | Epoch 61/120 | train batch 5/5 | batch_loss=0.01194385 | running_loss=0.01050724
+2026-04-15 12:42:34,773 | INFO | lakeice_ncde | Epoch 61 complete | train_loss=0.01050724 | val_loss=0.11103663 | val_rmse=0.33322159 | val_mae=0.27898683 | val_r2=-0.77093716
+2026-04-15 12:42:34,782 | INFO | lakeice_ncde | Epoch 62/120 started.
+2026-04-15 12:42:34,921 | INFO | lakeice_ncde | Epoch 62/120 | train batch 1/5 | batch_loss=0.01278757 | running_loss=0.01278757
+2026-04-15 12:42:34,989 | INFO | lakeice_ncde | Epoch 62/120 | train batch 2/5 | batch_loss=0.00783658 | running_loss=0.01031207
+2026-04-15 12:42:35,087 | INFO | lakeice_ncde | Epoch 62/120 | train batch 3/5 | batch_loss=0.01035457 | running_loss=0.01032624
+2026-04-15 12:42:35,169 | INFO | lakeice_ncde | Epoch 62/120 | train batch 4/5 | batch_loss=0.01062037 | running_loss=0.01039977
+2026-04-15 12:42:35,236 | INFO | lakeice_ncde | Epoch 62/120 | train batch 5/5 | batch_loss=0.01261863 | running_loss=0.01084354
+2026-04-15 12:42:35,255 | INFO | lakeice_ncde | Epoch 62 complete | train_loss=0.01084354 | val_loss=0.11094019 | val_rmse=0.33307686 | val_mae=0.27865850 | val_r2=-0.76939913
+2026-04-15 12:42:35,268 | INFO | lakeice_ncde | Early stopping triggered at epoch 62.
+2026-04-15 12:42:35,406 | INFO | lakeice_ncde | Final evaluation | val_loss=0.11094019 | test_loss=0.14051123 | best_val_rmse=0.32697530 | best_epoch=42
+2026-04-15 12:42:36,582 | INFO | lakeice_ncde | Computing hermite coefficients for 163 windows from S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\outputs\runs\xiaoxingkai_transfer_daily12\xiaoxingkai_transfer_daily12_20260415_124159\artifacts\seasonal_rollout_windows.pt
+2026-04-15 12:42:36,584 | INFO | lakeice_ncde | Coefficient progress for seasonal_rollout_windows.pt: 1/163 windows processed.
+2026-04-15 12:42:36,591 | INFO | lakeice_ncde | Coefficient progress for seasonal_rollout_windows.pt: 16/163 windows processed.
+2026-04-15 12:42:36,598 | INFO | lakeice_ncde | Coefficient progress for seasonal_rollout_windows.pt: 32/163 windows processed.
+2026-04-15 12:42:36,605 | INFO | lakeice_ncde | Coefficient progress for seasonal_rollout_windows.pt: 48/163 windows processed.
+2026-04-15 12:42:36,613 | INFO | lakeice_ncde | Coefficient progress for seasonal_rollout_windows.pt: 64/163 windows processed.
+2026-04-15 12:42:36,620 | INFO | lakeice_ncde | Coefficient progress for seasonal_rollout_windows.pt: 80/163 windows processed.
+2026-04-15 12:42:36,627 | INFO | lakeice_ncde | Coefficient progress for seasonal_rollout_windows.pt: 96/163 windows processed.
+2026-04-15 12:42:36,635 | INFO | lakeice_ncde | Coefficient progress for seasonal_rollout_windows.pt: 112/163 windows processed.
+2026-04-15 12:42:36,642 | INFO | lakeice_ncde | Coefficient progress for seasonal_rollout_windows.pt: 128/163 windows processed.
+2026-04-15 12:42:36,649 | INFO | lakeice_ncde | Coefficient progress for seasonal_rollout_windows.pt: 144/163 windows processed.
+2026-04-15 12:42:36,657 | INFO | lakeice_ncde | Coefficient progress for seasonal_rollout_windows.pt: 160/163 windows processed.
+2026-04-15 12:42:36,661 | INFO | lakeice_ncde | Coefficient progress for seasonal_rollout_windows.pt: 163/163 windows processed.
+2026-04-15 12:42:41,653 | INFO | lakeice_ncde | PDF report saved to S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\outputs\runs\xiaoxingkai_transfer_daily12\xiaoxingkai_transfer_daily12_20260415_124159\figures\report.pdf
+2026-04-15 12:42:41,665 | INFO | lakeice_ncde | Finished experiment 'xiaoxingkai_transfer_daily12'. Run directory: S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\outputs\runs\xiaoxingkai_transfer_daily12\xiaoxingkai_transfer_daily12_20260415_124159

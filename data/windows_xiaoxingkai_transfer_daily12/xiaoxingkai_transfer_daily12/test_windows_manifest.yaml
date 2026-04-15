@@ -1,0 +1,6 @@
+split_name: xiaoxingkai_transfer_daily12
+split: test
+bundle_path: S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\windows_xiaoxingkai_transfer_daily12\xiaoxingkai_transfer_daily12\test_windows.pt
+metadata_path: S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\windows_xiaoxingkai_transfer_daily12\xiaoxingkai_transfer_daily12\test_windows_metadata.csv
+feature_scaler_path: S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\windows_xiaoxingkai_transfer_daily12\xiaoxingkai_transfer_daily12\feature_scaler.yaml
+count: 36

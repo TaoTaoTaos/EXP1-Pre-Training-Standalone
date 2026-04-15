@@ -1,0 +1,10 @@
+eval:
+  plot_sample_windows: 4
+  interpolation_debug_points: 100
+  prediction_clip_min: 0.0
+  metrics:
+    - "rmse"
+    - "mae"
+    - "r2"
+    - "bias"
+    - "negative_count"

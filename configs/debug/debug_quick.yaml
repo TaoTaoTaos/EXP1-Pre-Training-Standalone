@@ -1,0 +1,24 @@
+experiment:
+  name: "debug_quick"
+  description: "Debug run over two lakes and a small number of windows."
+
+debug:
+  enabled: true
+  max_lakes: 2
+  max_windows_per_split: 8
+  max_epochs: 2
+
+train:
+  batch_size: 2
+  max_epochs: 2
+  num_workers: 0
+
+window:
+  window_days: 7
+
+model:
+  hidden_channels: 16
+  hidden_hidden_channels: 32
+  num_hidden_layers: 1
+  dropout: 0.0
+  method: "rk4"

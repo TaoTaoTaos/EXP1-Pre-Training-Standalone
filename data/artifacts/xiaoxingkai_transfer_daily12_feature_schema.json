@@ -1,0 +1,32 @@
+{
+  "time_channel": "relative_time",
+  "feature_columns": [
+    "doy_sin",
+    "doy_cos",
+    "Ten_Meter_Elevation_Wind_Speed_meterPerSecond",
+    "Air_Temperature_celsius",
+    "Relative_Humidity_percent",
+    "Shortwave_Radiation_Downwelling_wattPerMeterSquared",
+    "Longwave_Radiation_Downwelling_wattPerMeterSquared",
+    "Sea_Level_Barometric_Pressure_pascal",
+    "Surface_Level_Barometric_Pressure_pascal",
+    "Precipitation_millimeterPerDay",
+    "Snowfall_millimeterPerDay"
+  ],
+  "input_channels": [
+    "relative_time",
+    "doy_sin",
+    "doy_cos",
+    "Ten_Meter_Elevation_Wind_Speed_meterPerSecond",
+    "Air_Temperature_celsius",
+    "Relative_Humidity_percent",
+    "Shortwave_Radiation_Downwelling_wattPerMeterSquared",
+    "Longwave_Radiation_Downwelling_wattPerMeterSquared",
+    "Sea_Level_Barometric_Pressure_pascal",
+    "Surface_Level_Barometric_Pressure_pascal",
+    "Precipitation_millimeterPerDay",
+    "Snowfall_millimeterPerDay"
+  ],
+  "target_column": "total_ice_m",
+  "target_transform": "none"
+}

@@ -1,0 +1,140 @@
+paths:
+  raw_excel: data/raw/LakeIce_ERA5_less60_XiaoxingkaiDaily12.xlsx
+  prepared_csv: data/interim/prepared_data_xiaoxingkai_transfer_daily12_history_autoreg.csv
+  validation_report_json: data/artifacts/xiaoxingkai_transfer_daily12_history_autoreg_validation_report.json
+  feature_schema_json: data/artifacts/xiaoxingkai_transfer_daily12_history_autoreg_feature_schema.json
+  split_root: data/splits_xiaoxingkai_transfer_daily12_history_autoreg
+  window_root: data/windows_xiaoxingkai_transfer_daily12_history_autoreg
+  coeff_root: data/coeffs_xiaoxingkai_transfer_daily12_history_autoreg
+  artifact_root: data/artifacts/xiaoxingkai_transfer_daily12_history_autoreg
+  output_root: outputs/runs
+data:
+  excel_sheet_name: lakeice_era5
+  lake_column: lake_name
+  lake_id_column: lake_id
+  include_lakes: null
+  datetime_column: sample_datetime
+  era5_datetime_column: era5_datetime
+  target_column: total_ice_m
+  doy_column: doy
+  latitude_column: latitude
+  longitude_column: longitude
+  required_columns:
+  - lake_name
+  - sample_datetime
+  - doy
+  - latitude
+  - longitude
+  - total_ice_m
+  - Ten_Meter_Elevation_Wind_Speed_meterPerSecond
+  - Air_Temperature_celsius
+  - Relative_Humidity_percent
+  - Shortwave_Radiation_Downwelling_wattPerMeterSquared
+  - Longwave_Radiation_Downwelling_wattPerMeterSquared
+  - Sea_Level_Barometric_Pressure_pascal
+  - Surface_Level_Barometric_Pressure_pascal
+  - Precipitation_millimeterPerDay
+  - Snowfall_millimeterPerDay
+features:
+  time_channel_name: relative_time
+  cyclical_columns:
+  - doy_sin
+  - doy_cos
+  feature_columns:
+  - doy_sin
+  - doy_cos
+  - Ten_Meter_Elevation_Wind_Speed_meterPerSecond
+  - Air_Temperature_celsius
+  - Relative_Humidity_percent
+  - Shortwave_Radiation_Downwelling_wattPerMeterSquared
+  - Longwave_Radiation_Downwelling_wattPerMeterSquared
+  - Sea_Level_Barometric_Pressure_pascal
+  - Surface_Level_Barometric_Pressure_pascal
+  - Precipitation_millimeterPerDay
+  - Snowfall_millimeterPerDay
+  - ice_prev_m
+  - ice_prev_gap_days
+  - ice_prev_available
+  target_transform: none
+  input_scaler: standard
+  exclude_target_from_inputs: true
+split:
+  strategy: time_holdout
+  name: xiaoxingkai_transfer_daily12_history_autoreg_reference
+  seed: 42
+window:
+  window_days: 7
+  min_points: 2
+  anchor_on_every_observation: true
+  save_raw_windows: true
+coeffs:
+  interpolation: hermite
+model:
+  hidden_channels: 48
+  hidden_hidden_channels: 96
+  num_hidden_layers: 2
+  dropout: 0.1
+  method: midpoint
+  use_adjoint: false
+  nonnegative_output: true
+train:
+  seed: 42
+  batch_size: 64
+  batch_parallel: true
+  num_workers: 0
+  learning_rate: 0.0002
+  weight_decay: 0.0005
+  max_epochs: 1
+  gradient_clip_norm: 0.5
+  optimizer: adamw
+  loss: huber
+  huber_delta: 0.1
+  device: auto
+  early_stopping:
+    patience: 1
+    min_delta: 1.0e-05
+  scheduler:
+    name: reduce_on_plateau
+    factor: 0.5
+    patience: 8
+    min_lr: 1.0e-05
+eval:
+  plot_sample_windows: 4
+  interpolation_debug_points: 100
+  prediction_clip_min: 0.0
+  metrics:
+  - rmse
+  - mae
+  - r2
+  - bias
+  - negative_count
+experiment:
+  name: xiaoxingkai_transfer_daily12_history_autoreg
+  description: Train with lagged ice-history channels and evaluate Xiaoxingkai with
+    both holdout-test and autoregressive seasonal rollout.
+  save_figures: true
+  save_pdf_report: true
+debug:
+  enabled: false
+  max_lakes: null
+  max_windows_per_split: null
+  max_epochs: null
+custom_split:
+  val_fraction: 0.1
+  min_val_rows_per_lake: 8
+  min_train_rows_per_lake: 24
+  max_train_windows_per_lake: 20
+  max_val_windows_per_lake: 5
+  target_lake_test_start: '2026-01-01'
+seasonal_rollout:
+  enabled: true
+  autoregressive_history: true
+  target_lake_name: Xiaoxingkai
+  era5_csv: data/raw/XXKH-St-UTC+8-ERA5-1980-202603-noNA.csv
+  start_datetime: '2025-10-01 12:00:00'
+  end_datetime: '2026-03-31 12:00:00'
+  daily_hour: 12
+runtime:
+  project_root: S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone
+  config_path: S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\configs\experiments\xiaoxingkai_transfer_daily12_history_autoreg.yaml
+  override_paths: []

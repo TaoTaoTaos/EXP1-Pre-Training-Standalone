@@ -1,0 +1,73 @@
+Metadata-Version: 2.4
+Name: lakeice-ncde
+Version: 0.1.0
+Summary: Standalone Neural CDE training pipeline for Xiaoxingkai lake-ice transfer experiments.
+Author: OpenAI Codex
+License: MIT
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: joblib>=1.4
+Requires-Dist: matplotlib>=3.9
+Requires-Dist: numpy<2.0,>=1.26
+Requires-Dist: openpyxl>=3.1
+Requires-Dist: optuna>=4.4
+Requires-Dist: pandas>=2.2
+Requires-Dist: PyYAML>=6.0
+Requires-Dist: rich>=13.9
+Requires-Dist: scikit-learn>=1.5
+Requires-Dist: torch>=2.4
+Requires-Dist: torchcde>=0.2.5
+Requires-Dist: torchdiffeq>=0.2.5
+Requires-Dist: torchsde>=0.2.6
+Provides-Extra: dev
+Requires-Dist: pytest>=8.3; extra == "dev"
+
+# Xiaoxingkai Transfer Training
+
+This repository is a standalone Neural CDE training project for one task: train on source lakes and evaluate transfer to `【Li】Lake Xiaoxingkai`.
+
+## Main Entry
+
+There is one supported entry point:
+
+```powershell
+python -m lakeice_ncde run --config configs/experiments/xiaoxingkai_transfer.yaml
+```
+
+After editable install, the equivalent command is:
+
+```powershell
+lakeice-ncde run --config configs/experiments/xiaoxingkai_transfer.yaml
+```
+
+## Available Configs
+
+- `configs/experiments/xiaoxingkai_transfer.yaml`
+  Uses the normalized `less60` dataset and tests on Xiaoxingkai.
+- `configs/experiments/xiaoxingkai_transfer_daily12.yaml`
+  Same workflow, but the Xiaoxingkai test rows are restricted to 12:00 observations.
+
+## Workflow
+
+The single CLI command runs the full pipeline:
+
+1. Load and standardize the Excel data.
+2. Split source lakes into temporal `train` and `val`.
+3. Keep Xiaoxingkai fully isolated as `test`.
+4. Build irregular windows.
+5. Precompute CDE interpolation coefficients.
+6. Train the Neural CDE model.
+7. Export metrics, predictions, plots, and the PDF report.
+
+## Install
+
+```powershell
+conda activate SCI
+cd S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone
+python -m pip install -r requirements.txt
+python -m pip install -e .
+```
+
+## Output
+
+Run artifacts are written under `outputs/runs/<experiment_name>/...`.

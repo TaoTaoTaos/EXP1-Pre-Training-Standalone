@@ -1,0 +1,103 @@
+2026-04-15 12:38:09,833 | INFO | lakeice_ncde | Starting experiment 'xiaoxingkai_transfer_daily12'
+2026-04-15 12:38:09,839 | INFO | lakeice_ncde | Run directory: S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\outputs\runs\xiaoxingkai_transfer_daily12\xiaoxingkai_transfer_daily12_20260415_123809
+2026-04-15 12:38:09,841 | INFO | lakeice_ncde | Running target transfer | target=【Li】Lake Xiaoxingkai | train=['【Huo】Lake Hnagzhang', '【Huo】Lake Ulansu', '【North Temperate Lakes LTER】Crystal Lake (NTL)', '【North Temperate Lakes LTER】Bog 27-2 (Crystal Bog)', '【North Temperate Lakes LTER】Sparkling Lake', '【North Temperate Lakes LTER】Big Muskellunge Lake', '【North Temperate Lakes LTER】Allequash Lake', '【North Temperate Lakes LTER】Bog 12-15 (Trout Bog)', '【North Temperate Lakes LTER】Trout Lake', '【IISD Experimental】Lake 239', '【IISD Experimental】Lake 302']
+2026-04-15 12:38:09,847 | INFO | lakeice_ncde | Target lake test starts at 2026-01-01; target rows before the cutoff are split into train and val.
+2026-04-15 12:38:09,848 | INFO | lakeice_ncde | Config summary | interpolation=hermite | method=midpoint | window_days=10 | batch_size=64 | target_transform=none
+2026-04-15 12:38:09,914 | INFO | lakeice_ncde | Fold 'xiaoxingkai_transfer_daily12' -> train lakes (12): ['【Huo】Lake Hnagzhang', '【Huo】Lake Ulansu', '【IISD Experimental】Lake 239', '【IISD Experimental】Lake 302', '【Li】Lake Xiaoxingkai', '【North Temperate Lakes LTER】Allequash Lake', '【North Temperate Lakes LTER】Big Muskellunge Lake', '【North Temperate Lakes LTER】Bog 12-15 (Trout Bog)', '【North Temperate Lakes LTER】Bog 27-2 (Crystal Bog)', '【North Temperate Lakes LTER】Crystal Lake (NTL)', '【North Temperate Lakes LTER】Sparkling Lake', '【North Temperate Lakes LTER】Trout Lake']
+2026-04-15 12:38:09,919 | INFO | lakeice_ncde | Fold 'xiaoxingkai_transfer_daily12' -> val lakes (12): ['【Huo】Lake Hnagzhang', '【Huo】Lake Ulansu', '【IISD Experimental】Lake 239', '【IISD Experimental】Lake 302', '【Li】Lake Xiaoxingkai', '【North Temperate Lakes LTER】Allequash Lake', '【North Temperate Lakes LTER】Big Muskellunge Lake', '【North Temperate Lakes LTER】Bog 12-15 (Trout Bog)', '【North Temperate Lakes LTER】Bog 27-2 (Crystal Bog)', '【North Temperate Lakes LTER】Crystal Lake (NTL)', '【North Temperate Lakes LTER】Sparkling Lake', '【North Temperate Lakes LTER】Trout Lake']
+2026-04-15 12:38:09,923 | INFO | lakeice_ncde | Fold 'xiaoxingkai_transfer_daily12' -> test lakes (1): ['【Li】Lake Xiaoxingkai']
+2026-04-15 12:38:09,939 | INFO | lakeice_ncde | Building train windows for split 'xiaoxingkai_transfer_daily12': 1251 rows across 12 lakes.
+2026-04-15 12:38:10,258 | INFO | lakeice_ncde | Window progress for split 'train': 1/12 lakes processed, 89 windows built.
+2026-04-15 12:38:10,767 | INFO | lakeice_ncde | Window progress for split 'train': 2/12 lakes processed, 233 windows built.
+2026-04-15 12:38:10,965 | INFO | lakeice_ncde | Window progress for split 'train': 3/12 lakes processed, 254 windows built.
+2026-04-15 12:38:11,092 | INFO | lakeice_ncde | Window progress for split 'train': 4/12 lakes processed, 260 windows built.
+2026-04-15 12:38:11,196 | INFO | lakeice_ncde | Window progress for split 'train': 5/12 lakes processed, 283 windows built.
+2026-04-15 12:38:11,350 | INFO | lakeice_ncde | Window progress for split 'train': 6/12 lakes processed, 284 windows built.
+2026-04-15 12:38:11,497 | INFO | lakeice_ncde | Window progress for split 'train': 7/12 lakes processed, 284 windows built.
+2026-04-15 12:38:11,615 | INFO | lakeice_ncde | Window progress for split 'train': 8/12 lakes processed, 284 windows built.
+2026-04-15 12:38:11,798 | INFO | lakeice_ncde | Window progress for split 'train': 9/12 lakes processed, 284 windows built.
+2026-04-15 12:38:11,951 | INFO | lakeice_ncde | Window progress for split 'train': 10/12 lakes processed, 284 windows built.
+2026-04-15 12:38:12,074 | INFO | lakeice_ncde | Window progress for split 'train': 11/12 lakes processed, 284 windows built.
+2026-04-15 12:38:12,241 | INFO | lakeice_ncde | Window progress for split 'train': 12/12 lakes processed, 284 windows built.
+2026-04-15 12:38:12,284 | INFO | lakeice_ncde | Saved train windows for split 'xiaoxingkai_transfer_daily12': 284 samples -> S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\windows_xiaoxingkai_transfer_daily12\xiaoxingkai_transfer_daily12\train_windows.pt
+2026-04-15 12:38:12,289 | INFO | lakeice_ncde | Building val windows for split 'xiaoxingkai_transfer_daily12': 150 rows across 12 lakes.
+2026-04-15 12:38:12,328 | INFO | lakeice_ncde | Window progress for split 'val': 1/12 lakes processed, 11 windows built.
+2026-04-15 12:38:12,386 | INFO | lakeice_ncde | Window progress for split 'val': 2/12 lakes processed, 28 windows built.
+2026-04-15 12:38:12,425 | INFO | lakeice_ncde | Window progress for split 'val': 3/12 lakes processed, 30 windows built.
+2026-04-15 12:38:12,460 | INFO | lakeice_ncde | Window progress for split 'val': 4/12 lakes processed, 33 windows built.
+2026-04-15 12:38:12,492 | INFO | lakeice_ncde | Window progress for split 'val': 5/12 lakes processed, 40 windows built.
+2026-04-15 12:38:12,513 | INFO | lakeice_ncde | Window progress for split 'val': 6/12 lakes processed, 40 windows built.
+2026-04-15 12:38:12,536 | INFO | lakeice_ncde | Window progress for split 'val': 7/12 lakes processed, 40 windows built.
+2026-04-15 12:38:12,564 | INFO | lakeice_ncde | Window progress for split 'val': 8/12 lakes processed, 41 windows built.
+2026-04-15 12:38:12,587 | INFO | lakeice_ncde | Window progress for split 'val': 9/12 lakes processed, 41 windows built.
+2026-04-15 12:38:12,610 | INFO | lakeice_ncde | Window progress for split 'val': 10/12 lakes processed, 41 windows built.
+2026-04-15 12:38:12,632 | INFO | lakeice_ncde | Window progress for split 'val': 11/12 lakes processed, 41 windows built.
+2026-04-15 12:38:12,654 | INFO | lakeice_ncde | Window progress for split 'val': 12/12 lakes processed, 41 windows built.
+2026-04-15 12:38:12,668 | INFO | lakeice_ncde | Saved val windows for split 'xiaoxingkai_transfer_daily12': 41 samples -> S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\windows_xiaoxingkai_transfer_daily12\xiaoxingkai_transfer_daily12\val_windows.pt
+2026-04-15 12:38:12,671 | INFO | lakeice_ncde | Building test windows for split 'xiaoxingkai_transfer_daily12': 37 rows across 1 lakes.
+2026-04-15 12:38:12,821 | INFO | lakeice_ncde | Window progress for split 'test': 1/1 lakes processed, 36 windows built.
+2026-04-15 12:38:12,876 | INFO | lakeice_ncde | Saved test windows for split 'xiaoxingkai_transfer_daily12': 36 samples -> S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\windows_xiaoxingkai_transfer_daily12\xiaoxingkai_transfer_daily12\test_windows.pt
+2026-04-15 12:38:12,947 | INFO | lakeice_ncde | Balanced windows with train cap=20 and val cap=5
+2026-04-15 12:38:13,855 | INFO | lakeice_ncde | Computing hermite coefficients for 87 windows from S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\windows_xiaoxingkai_transfer_daily12\xiaoxingkai_transfer_daily12\train_windows.pt
+2026-04-15 12:38:13,858 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 1/87 windows processed.
+2026-04-15 12:38:13,862 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 8/87 windows processed.
+2026-04-15 12:38:13,868 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 16/87 windows processed.
+2026-04-15 12:38:13,875 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 24/87 windows processed.
+2026-04-15 12:38:13,882 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 32/87 windows processed.
+2026-04-15 12:38:13,886 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 40/87 windows processed.
+2026-04-15 12:38:13,891 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 48/87 windows processed.
+2026-04-15 12:38:13,895 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 56/87 windows processed.
+2026-04-15 12:38:13,899 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 64/87 windows processed.
+2026-04-15 12:38:13,903 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 72/87 windows processed.
+2026-04-15 12:38:13,907 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 80/87 windows processed.
+2026-04-15 12:38:13,911 | INFO | lakeice_ncde | Coefficient progress for train_windows.pt: 87/87 windows processed.
+2026-04-15 12:38:13,944 | INFO | lakeice_ncde | Computing hermite coefficients for 21 windows from S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\windows_xiaoxingkai_transfer_daily12\xiaoxingkai_transfer_daily12\val_windows.pt
+2026-04-15 12:38:13,947 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 1/21 windows processed.
+2026-04-15 12:38:13,949 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 2/21 windows processed.
+2026-04-15 12:38:13,951 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 4/21 windows processed.
+2026-04-15 12:38:13,954 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 6/21 windows processed.
+2026-04-15 12:38:13,956 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 8/21 windows processed.
+2026-04-15 12:38:13,959 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 10/21 windows processed.
+2026-04-15 12:38:13,961 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 12/21 windows processed.
+2026-04-15 12:38:13,963 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 14/21 windows processed.
+2026-04-15 12:38:13,966 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 16/21 windows processed.
+2026-04-15 12:38:13,969 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 18/21 windows processed.
+2026-04-15 12:38:13,971 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 20/21 windows processed.
+2026-04-15 12:38:13,973 | INFO | lakeice_ncde | Coefficient progress for val_windows.pt: 21/21 windows processed.
+2026-04-15 12:38:13,997 | INFO | lakeice_ncde | Computing hermite coefficients for 36 windows from S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\windows_xiaoxingkai_transfer_daily12\xiaoxingkai_transfer_daily12\test_windows.pt
+2026-04-15 12:38:14,000 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 1/36 windows processed.
+2026-04-15 12:38:14,002 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 3/36 windows processed.
+2026-04-15 12:38:14,005 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 6/36 windows processed.
+2026-04-15 12:38:14,008 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 9/36 windows processed.
+2026-04-15 12:38:14,012 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 12/36 windows processed.
+2026-04-15 12:38:14,014 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 15/36 windows processed.
+2026-04-15 12:38:14,017 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 18/36 windows processed.
+2026-04-15 12:38:14,020 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 21/36 windows processed.
+2026-04-15 12:38:14,025 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 24/36 windows processed.
+2026-04-15 12:38:14,028 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 27/36 windows processed.
+2026-04-15 12:38:14,032 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 30/36 windows processed.
+2026-04-15 12:38:14,037 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 33/36 windows processed.
+2026-04-15 12:38:14,041 | INFO | lakeice_ncde | Coefficient progress for test_windows.pt: 36/36 windows processed.
+2026-04-15 12:38:14,059 | INFO | lakeice_ncde | Saved 3 coefficient bundle(s) under S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\coeffs_xiaoxingkai_transfer_daily12
+2026-04-15 12:38:14,116 | INFO | lakeice_ncde | Data summary | train=87 | val=21 | test=36 | input_channels=12 | batch_parallel=True
+2026-04-15 12:38:17,716 | INFO | lakeice_ncde | Training on cuda | train_batches=2 | val_batches=1 | test_batches=1
+2026-04-15 12:38:17,719 | INFO | lakeice_ncde | Epoch 1/1 started.
+2026-04-15 12:38:18,398 | INFO | lakeice_ncde | Epoch 1/1 | train batch 1/2 | batch_loss=0.05868138 | running_loss=0.05868138
+2026-04-15 12:38:18,513 | INFO | lakeice_ncde | Epoch 1/1 | train batch 2/2 | batch_loss=0.02839216 | running_loss=0.04353677
+2026-04-15 12:38:18,573 | INFO | lakeice_ncde | Epoch 1 complete | train_loss=0.04353677 | val_loss=1.18286943 | val_rmse=1.08759801 | val_mae=0.65214479 | val_r2=-16.64069447
+2026-04-15 12:38:18,958 | INFO | lakeice_ncde | Final evaluation | val_loss=1.18286943 | test_loss=1.52302015 | best_val_rmse=1.08759801 | best_epoch=1
+2026-04-15 12:38:20,407 | INFO | lakeice_ncde | Computing hermite coefficients for 163 windows from S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\outputs\runs\xiaoxingkai_transfer_daily12\xiaoxingkai_transfer_daily12_20260415_123809\artifacts\seasonal_rollout_windows.pt
+2026-04-15 12:38:20,409 | INFO | lakeice_ncde | Coefficient progress for seasonal_rollout_windows.pt: 1/163 windows processed.
+2026-04-15 12:38:20,416 | INFO | lakeice_ncde | Coefficient progress for seasonal_rollout_windows.pt: 16/163 windows processed.
+2026-04-15 12:38:20,424 | INFO | lakeice_ncde | Coefficient progress for seasonal_rollout_windows.pt: 32/163 windows processed.
+2026-04-15 12:38:20,433 | INFO | lakeice_ncde | Coefficient progress for seasonal_rollout_windows.pt: 48/163 windows processed.
+2026-04-15 12:38:20,443 | INFO | lakeice_ncde | Coefficient progress for seasonal_rollout_windows.pt: 64/163 windows processed.
+2026-04-15 12:38:20,451 | INFO | lakeice_ncde | Coefficient progress for seasonal_rollout_windows.pt: 80/163 windows processed.
+2026-04-15 12:38:20,461 | INFO | lakeice_ncde | Coefficient progress for seasonal_rollout_windows.pt: 96/163 windows processed.
+2026-04-15 12:38:20,471 | INFO | lakeice_ncde | Coefficient progress for seasonal_rollout_windows.pt: 112/163 windows processed.
+2026-04-15 12:38:20,478 | INFO | lakeice_ncde | Coefficient progress for seasonal_rollout_windows.pt: 128/163 windows processed.
+2026-04-15 12:38:20,487 | INFO | lakeice_ncde | Coefficient progress for seasonal_rollout_windows.pt: 144/163 windows processed.
+2026-04-15 12:38:20,494 | INFO | lakeice_ncde | Coefficient progress for seasonal_rollout_windows.pt: 160/163 windows processed.
+2026-04-15 12:38:20,498 | INFO | lakeice_ncde | Coefficient progress for seasonal_rollout_windows.pt: 163/163 windows processed.
+2026-04-15 12:38:26,029 | INFO | lakeice_ncde | PDF report saved to S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\outputs\runs\xiaoxingkai_transfer_daily12\xiaoxingkai_transfer_daily12_20260415_123809\figures\report.pdf
+2026-04-15 12:38:26,046 | INFO | lakeice_ncde | Finished experiment 'xiaoxingkai_transfer_daily12'. Run directory: S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\outputs\runs\xiaoxingkai_transfer_daily12\xiaoxingkai_transfer_daily12_20260415_123809

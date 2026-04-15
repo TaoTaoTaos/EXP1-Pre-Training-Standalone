@@ -1,0 +1,5 @@
+window:
+  window_days: 14
+  min_points: 2
+  anchor_on_every_observation: true
+  save_raw_windows: true

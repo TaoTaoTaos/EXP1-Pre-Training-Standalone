@@ -1,0 +1,12 @@
+{
+  "best_epoch": 1,
+  "best_val_rmse": 1.087598007216763,
+  "final_val_loss": 1.1828694253018741,
+  "final_test_loss": 1.5230201528093272,
+  "duration_seconds": 1.2413287162780762,
+  "device": "cuda",
+  "train_loss_name": "huber",
+  "interpolation": "hermite",
+  "window_days": 10,
+  "target_transform": "none"
+}

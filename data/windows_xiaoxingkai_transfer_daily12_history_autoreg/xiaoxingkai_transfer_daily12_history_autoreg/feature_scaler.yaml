@@ -1,0 +1,47 @@
+feature_columns:
+- doy_sin
+- doy_cos
+- Ten_Meter_Elevation_Wind_Speed_meterPerSecond
+- Air_Temperature_celsius
+- Relative_Humidity_percent
+- Shortwave_Radiation_Downwelling_wattPerMeterSquared
+- Longwave_Radiation_Downwelling_wattPerMeterSquared
+- Sea_Level_Barometric_Pressure_pascal
+- Surface_Level_Barometric_Pressure_pascal
+- Precipitation_millimeterPerDay
+- Snowfall_millimeterPerDay
+- ice_prev_m
+- ice_prev_gap_days
+- ice_prev_available
+mean:
+  doy_sin: 0.5049246847747176
+  doy_cos: 0.6427125828527671
+  Ten_Meter_Elevation_Wind_Speed_meterPerSecond: 3.287666588178897
+  Air_Temperature_celsius: -6.296319024914364
+  Relative_Humidity_percent: 68.99082078870791
+  Shortwave_Radiation_Downwelling_wattPerMeterSquared: 40.61789248458312
+  Longwave_Radiation_Downwelling_wattPerMeterSquared: 225.83919781024056
+  Sea_Level_Barometric_Pressure_pascal: 102065.54309909849
+  Surface_Level_Barometric_Pressure_pascal: 95662.42661826966
+  Precipitation_millimeterPerDay: 1.0629569063035242
+  Snowfall_millimeterPerDay: 0.6787036124525649
+  ice_prev_m: 0.37886921379149585
+  ice_prev_gap_days: 89.90441858031336
+  ice_prev_available: 0.9903121636167922
+std:
+  doy_sin: 0.45213926967930507
+  doy_cos: 0.35712977943842966
+  Ten_Meter_Elevation_Wind_Speed_meterPerSecond: 1.5628851357990974
+  Air_Temperature_celsius: 7.972043932749916
+  Relative_Humidity_percent: 15.466175657543717
+  Shortwave_Radiation_Downwelling_wattPerMeterSquared: 83.59870684763374
+  Longwave_Radiation_Downwelling_wattPerMeterSquared: 47.97217384904204
+  Sea_Level_Barometric_Pressure_pascal: 1022.9252910406728
+  Surface_Level_Barometric_Pressure_pascal: 3599.2450963712445
+  Precipitation_millimeterPerDay: 4.909122116807834
+  Snowfall_millimeterPerDay: 3.068821359078582
+  ice_prev_m: 0.15225666640549912
+  ice_prev_gap_days: 154.3861504335203
+  ice_prev_available: 0.09794887548828698
+target_transform: none
+target_column: total_ice_m

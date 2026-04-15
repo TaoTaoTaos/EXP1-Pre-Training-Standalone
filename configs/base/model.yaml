@@ -1,0 +1,8 @@
+model:
+  hidden_channels: 64
+  hidden_hidden_channels: 128
+  num_hidden_layers: 2
+  dropout: 0.1
+  method: "dopri5"
+  use_adjoint: false
+  nonnegative_output: true
