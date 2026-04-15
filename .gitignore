@@ -1,0 +1,26 @@
+# Generated outputs
+outputs/
+**/outputs/
+
+# Large raw side datasets not needed for running EXP1
+IN-Situs/
+
+# EXP1 generated artifacts; source package under src/lakeice_ncde/data is kept
+EXP1-Pre-Training/data/artifacts/
+EXP1-Pre-Training/data/coeffs/
+EXP1-Pre-Training/data/interim/
+EXP1-Pre-Training/data/splits/
+EXP1-Pre-Training/data/windows/
+
+# Python caches and local build/install metadata
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.pytest_cache/
+.venv/
+
+# Large binary artifacts
+*.pt
+*.rar
