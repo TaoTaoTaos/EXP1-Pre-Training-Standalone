@@ -241,7 +241,7 @@ def create_comparison_metric_bars_figure(
 ) -> plt.Figure:
     split_df = metric_table.loc[metric_table["split"] == split].copy()
     metric_names = ["loss", "rmse", "mae", "r2", "bias", "negative_count"]
-    fig, axes = plt.subplots(3, 2, figsize=(14, 10.6))
+    fig, axes = plt.subplots(3, 2, figsize=(13.4, 7.8))
     x = np.arange(len(experiment_names))
 
     for axis, metric_name in zip(axes.flatten(), metric_names):
@@ -261,13 +261,15 @@ def create_comparison_metric_bars_figure(
         )
         axis.set_title(f"{split.upper()} {metric_name.upper()}")
         axis.set_xticks(x)
-        axis.set_xticklabels(experiment_names, rotation=15, ha="right")
+        axis.set_xticklabels(experiment_names, rotation=12, ha="right")
+        axis.tick_params(axis="x", labelsize=8.8)
+        axis.tick_params(axis="y", labelsize=9.2)
         axis.grid(True, axis="y", alpha=0.25)
         if metric_name in {"loss", "rmse", "mae", "negative_count"}:
             axis.set_ylim(bottom=0.0)
-        magnitude = max(1.0, max(abs(number) for number in values))
+        max_abs_value = max(abs(number) for number in values)
+        offset = 0.03 * max_abs_value if max_abs_value > 0 else 0.02
         for bar, value in zip(bars, values):
-            offset = 0.03 * magnitude
             axis.text(
                 bar.get_x() + bar.get_width() / 2.0,
                 value + offset if value >= 0 else value - offset,
@@ -278,7 +280,7 @@ def create_comparison_metric_bars_figure(
             )
 
     fig.suptitle(f"{split.upper()} Metrics Comparison", fontsize=15, y=0.975)
-    fig.subplots_adjust(left=0.07, right=0.98, top=0.92, bottom=0.10, hspace=0.52, wspace=0.24)
+    fig.subplots_adjust(left=0.07, right=0.985, top=0.92, bottom=0.15, hspace=0.54, wspace=0.18)
     return fig
 
 

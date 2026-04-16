@@ -14,7 +14,7 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
-from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import Image, KeepTogether, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from lakeice_ncde.visualization.plots import (
     create_comparison_loss_curves_figure,
@@ -183,11 +183,6 @@ def _build_cover_section(batch_run_name: str, batch_run_dir: Path, report_data: 
         Spacer(1, 10),
         Paragraph("Run Overview", styles["SectionHeading"]),
         _styled_table(run_rows, col_widths=[1.8, 5.5, 1.0, 1.2], font_size=8.2, left_columns=[0, 1]),
-        Spacer(1, 8),
-        Paragraph(
-            "The bar charts on the next page compare the exact validation and test metrics listed above. The later sections overlay the same Xiaoxingkai trajectories and training curves across all experiments.",
-            styles["BodySmall"],
-        ),
     ]
 
 
@@ -203,11 +198,19 @@ def _build_metric_figure_section(report_data: list[BatchExperimentReportData], s
             styles["BodyText"],
         ),
         Spacer(1, 6),
-        Paragraph("Validation Metrics", styles["Heading3"]),
-        _figure_to_reportlab_image(val_fig, max_width=10.0 * inch, max_height=3.6 * inch),
+        KeepTogether(
+            [
+                Paragraph("Validation Metrics", styles["Heading3"]),
+                _figure_to_reportlab_image(val_fig, max_width=10.2 * inch, max_height=5.2 * inch),
+            ]
+        ),
         Spacer(1, 8),
-        Paragraph("Test Metrics", styles["Heading3"]),
-        _figure_to_reportlab_image(test_fig, max_width=10.0 * inch, max_height=3.6 * inch),
+        KeepTogether(
+            [
+                Paragraph("Test Metrics", styles["Heading3"]),
+                _figure_to_reportlab_image(test_fig, max_width=10.2 * inch, max_height=5.2 * inch),
+            ]
+        ),
     ]
 
 
@@ -242,11 +245,19 @@ def _build_timeseries_section(report_data: list[BatchExperimentReportData], styl
             styles["BodyText"],
         ),
         Spacer(1, 6),
-        Paragraph("Overall", styles["Heading3"]),
-        _figure_to_reportlab_image(overall_fig, max_width=10.0 * inch, max_height=2.9 * inch),
+        KeepTogether(
+            [
+                Paragraph("Overall", styles["Heading3"]),
+                _figure_to_reportlab_image(overall_fig, max_width=10.2 * inch, max_height=4.7 * inch),
+            ]
+        ),
         Spacer(1, 8),
-        Paragraph("Local Focus", styles["Heading3"]),
-        _figure_to_reportlab_image(focus_fig, max_width=10.0 * inch, max_height=2.9 * inch),
+        KeepTogether(
+            [
+                Paragraph("Local Focus", styles["Heading3"]),
+                _figure_to_reportlab_image(focus_fig, max_width=10.2 * inch, max_height=4.7 * inch),
+            ]
+        ),
     ]
 
 
@@ -261,11 +272,19 @@ def _build_training_section(report_data: list[BatchExperimentReportData], styles
             styles["BodyText"],
         ),
         Spacer(1, 6),
-        Paragraph("Training And Validation Loss", styles["Heading3"]),
-        _figure_to_reportlab_image(loss_fig, max_width=10.0 * inch, max_height=2.8 * inch),
+        KeepTogether(
+            [
+                Paragraph("Training And Validation Loss", styles["Heading3"]),
+                _figure_to_reportlab_image(loss_fig, max_width=10.2 * inch, max_height=4.5 * inch),
+            ]
+        ),
         Spacer(1, 8),
-        Paragraph("Validation Metric Curves", styles["Heading3"]),
-        _figure_to_reportlab_image(metric_fig, max_width=10.0 * inch, max_height=2.8 * inch),
+        KeepTogether(
+            [
+                Paragraph("Validation Metric Curves", styles["Heading3"]),
+                _figure_to_reportlab_image(metric_fig, max_width=10.2 * inch, max_height=4.5 * inch),
+            ]
+        ),
     ]
 
 
@@ -458,21 +477,19 @@ def _build_styles():
 def _figure_to_reportlab_image(fig, max_width: float, max_height: float = 4.8 * inch) -> Image:
     import matplotlib.pyplot as plt
 
-    fig_width_inches, fig_height_inches = fig.get_size_inches()
-    if fig_width_inches <= 0 or fig_height_inches <= 0:
-        fig_width_inches, fig_height_inches = 1.0, 1.0
-
     buffer = BytesIO()
     fig.savefig(buffer, format="png", dpi=220, bbox_inches="tight")
     plt.close(fig)
     buffer.seek(0)
     image = Image(buffer)
 
-    width_scale = max_width / float(fig_width_inches * inch)
-    height_scale = max_height / float(fig_height_inches * inch)
+    image_width = float(max(1, image.imageWidth))
+    image_height = float(max(1, image.imageHeight))
+    width_scale = max_width / image_width
+    height_scale = max_height / image_height
     scale = min(width_scale, height_scale)
-    image.drawWidth = float(fig_width_inches * inch) * scale
-    image.drawHeight = float(fig_height_inches * inch) * scale
+    image.drawWidth = image_width * scale
+    image.drawHeight = image_height * scale
     return image
 
 

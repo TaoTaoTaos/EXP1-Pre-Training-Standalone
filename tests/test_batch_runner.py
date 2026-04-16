@@ -2,14 +2,18 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import pandas as pd
 from openpyxl import load_workbook
+from reportlab.lib.units import inch
 
 from lakeice_ncde.batch import BatchExperimentResult, collect_batch_run_snapshot, parse_batch_experiment_specs, write_batch_summary_artifacts
 from lakeice_ncde.config import load_config
 from lakeice_ncde.experiment.tracker import create_run_context
 from lakeice_ncde.utils.io import save_dataframe, save_json, save_yaml
 from lakeice_ncde.utils.paths import build_pdf_name
+from lakeice_ncde.visualization.batch_pdf_report import _figure_to_reportlab_image
+from lakeice_ncde.visualization.plots import create_comparison_metric_bars_figure
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -163,3 +167,57 @@ def test_write_batch_summary_artifacts_copies_pdfs_and_writes_excel(tmp_path) ->
     assert first_column["run.run_name"] == "[01]_EXP0_pretrain_autoreg_20260416_120000"
     assert first_column["metrics.val.rmse"] == 0.11
     assert first_column["summary.best_epoch"] == 12
+
+
+def test_figure_to_reportlab_image_uses_rendered_image_aspect_ratio() -> None:
+    fig, ax = plt.subplots(figsize=(6, 2))
+    ax.bar(range(3), [0.08, 0.14, 0.12], color=["#1f77b4", "#d62728", "#2ca02c"])
+    ax.set_xticks(range(3))
+    ax.set_xticklabels(
+        [
+            "EXP0_pretrain_autoreg",
+            "EXP1_transfer_autoreg",
+            "EXP2_transfer_autoreg_stefan",
+        ],
+        rotation=28,
+        ha="right",
+    )
+    ax.set_ylabel("Validation RMSE")
+    ax.set_title("Validation Metrics Comparison")
+
+    image = _figure_to_reportlab_image(fig, max_width=4.0 * inch, max_height=2.5 * inch)
+
+    original_aspect = 6.0 / 2.0
+    rendered_aspect = image.imageWidth / image.imageHeight
+    draw_aspect = image.drawWidth / image.drawHeight
+
+    assert abs(rendered_aspect - original_aspect) > 0.2
+    assert abs(draw_aspect - rendered_aspect) < 0.05
+    assert image.drawWidth <= 4.0 * inch
+    assert image.drawHeight <= 2.5 * inch
+
+
+def test_comparison_metric_bars_keep_small_value_labels_close_to_bars() -> None:
+    metric_table = pd.DataFrame(
+        [
+            {"experiment_name": "EXP0_pretrain_autoreg", "split": "val", "loss": 0.010, "rmse": 0.080, "mae": 0.060, "r2": 0.70, "bias": 0.010, "negative_count": 0},
+            {"experiment_name": "EXP1_transfer_autoreg", "split": "val", "loss": 0.011, "rmse": 0.082, "mae": 0.061, "r2": 0.80, "bias": -0.010, "negative_count": 0},
+            {"experiment_name": "EXP2_transfer_autoreg_stefan", "split": "val", "loss": 0.012, "rmse": 0.085, "mae": 0.062, "r2": 0.79, "bias": -0.010, "negative_count": 0},
+        ]
+    )
+
+    fig = create_comparison_metric_bars_figure(
+        metric_table,
+        split="val",
+        experiment_names=[
+            "EXP0_pretrain_autoreg",
+            "EXP1_transfer_autoreg",
+            "EXP2_transfer_autoreg_stefan",
+        ],
+    )
+    loss_axis = fig.axes[0]
+    label_positions = [text.get_position()[1] for text in loss_axis.texts]
+    plt.close(fig)
+
+    assert label_positions
+    assert max(label_positions) < 0.02
