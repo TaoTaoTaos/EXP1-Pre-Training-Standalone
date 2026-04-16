@@ -22,6 +22,12 @@ To launch the current three experiments in parallel and collect their PDFs plus 
 python -m lakeice_ncde run --config configs/experiments/Run-ALL.yaml
 ```
 
+To launch or resume the parameter-search workflow that wraps `Run-ALL.yaml`:
+
+```powershell
+python -m lakeice_ncde search --config configs/search/参数搜索.yaml
+```
+
 ## Available Configs
 
 - `configs/experiments/EXP0_pretrain_autoreg.yaml`
@@ -96,3 +102,12 @@ Batch artifacts are written under `outputs/runs/Run-ALL/[NN]_Run-ALL_.../`, incl
 - one batch-level comparison PDF
 - one `_summary.xlsx` workbook
 - the merged batch config and batch manifest under `artifacts/`
+
+Search artifacts are written under the configured `search.output_root`, including:
+
+- `trials_master.csv` with one row per trial
+- `trial_parameters.csv` with one row per trial x parameter
+- `trial_experiments.csv` with one row per trial x experiment
+- `top_trials.csv` sorted by the objective score
+- `study_summary.json` plus `artifacts/study.journal` for resume
+- one `trials/trial_000N/` folder per trial with resolved config, overrides, metadata, and the full `Run-ALL` outputs

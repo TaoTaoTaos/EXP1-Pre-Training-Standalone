@@ -1,0 +1,141 @@
+search:
+  name: "EXP2_test_r2_search"
+  base_batch_config: "configs/experiments/Run-ALL.yaml"
+  output_root: "outputs/search_runs/EXP2_test_r2_search"
+  n_trials: 64
+
+  sampler:
+    name: "tpe"
+    seed: 42
+
+  storage:
+    type: "journal"
+    path: "artifacts/study.journal"
+
+  execution:
+    max_parallel_trials: 4
+
+  objective:
+    experiment_name: "EXP2_transfer_autoreg_stefan"
+    split: "test"
+    metric: "r2"
+    success_threshold: 0.0
+    score_formula: "r2_dominant_composite"
+
+  parameters:
+    - name: "learning_rate_all"
+      key: "train.learning_rate"
+      enabled: true
+      scope: ["all"]
+      type: "float"
+      low: 1.0e-5
+      high: 1.0e-3
+      log: true
+
+    - name: "weight_decay_all"
+      key: "train.weight_decay"
+      enabled: true
+      scope: ["all"]
+      type: "float"
+      low: 1.0e-6
+      high: 1.0e-2
+      log: true
+
+    - name: "window_days_all"
+      key: "window.window_days"
+      enabled: true
+      scope: ["all"]
+      type: "int"
+      low: 7
+      high: 14
+      step: 1
+
+    - name: "hidden_channels_all"
+      key: "model.hidden_channels"
+      enabled: true
+      scope: ["all"]
+      type: "int"
+      low: 32
+      high: 96
+      step: 8
+
+    - name: "hidden_hidden_channels_all"
+      key: "model.hidden_hidden_channels"
+      enabled: true
+      scope: ["all"]
+      type: "int"
+      low: 64
+      high: 160
+      step: 16
+
+    - name: "num_hidden_layers_all"
+      key: "model.num_hidden_layers"
+      enabled: true
+      scope: ["all"]
+      type: "int"
+      low: 3
+      high: 7
+      step: 1
+
+    - name: "huber_delta_all"
+      key: "train.huber_delta"
+      enabled: true
+      scope: ["all"]
+      type: "float"
+      low: 0.05
+      high: 0.30
+      log: false
+
+    - name: "dropout_all"
+      key: "model.dropout"
+      enabled: false
+      scope: ["all"]
+      type: "float"
+      low: 0.0
+      high: 0.20
+      log: false
+
+    - name: "max_train_windows_per_lake_all"
+      key: "custom_split.max_train_windows_per_lake"
+      enabled: false
+      scope: ["all"]
+      type: "int"
+      low: 80
+      high: 240
+      step: 20
+
+    - name: "lambda_st_exp2"
+      key: "train.physics_loss.lambda_st"
+      enabled: true
+      scope: ["EXP2_transfer_autoreg_stefan"]
+      type: "float"
+      low: 5.0e-3
+      high: 8.0e-2
+      log: true
+
+    - name: "init_kappa_exp2"
+      key: "train.physics_loss.init_kappa"
+      enabled: true
+      scope: ["EXP2_transfer_autoreg_stefan"]
+      type: "float"
+      low: 4.0e-3
+      high: 2.0e-2
+      log: true
+
+    - name: "grow_temp_threshold_celsius_exp2"
+      key: "train.physics_loss.grow_temp_threshold_celsius"
+      enabled: true
+      scope: ["EXP2_transfer_autoreg_stefan"]
+      type: "float"
+      low: -1.5
+      high: 0.0
+      log: false
+
+    - name: "lambda_nn_exp2"
+      key: "train.physics_loss.lambda_nn"
+      enabled: false
+      scope: ["EXP2_transfer_autoreg_stefan"]
+      type: "float"
+      low: 0.5
+      high: 2.0
+      log: false
