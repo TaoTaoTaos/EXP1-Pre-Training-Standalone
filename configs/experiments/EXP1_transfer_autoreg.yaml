@@ -1,0 +1,20 @@
+extends: "EXP0_pretrain_autoreg.yaml"
+
+experiment:
+  name: "EXP1_transfer_autoreg"
+  description: "Experiment 1: transfer learning with Xiaoxingkai history before the cutoff included in train and val."
+
+paths:
+  prepared_csv: "data/interim/prepared_data_EXP1_transfer_autoreg.csv"
+  validation_report_json: "data/artifacts/EXP1_transfer_autoreg_validation_report.json"
+  feature_schema_json: "data/artifacts/EXP1_transfer_autoreg_feature_schema.json"
+  split_root: "data/splits_EXP1_transfer_autoreg"
+  window_root: "data/windows_EXP1_transfer_autoreg"
+  coeff_root: "data/coeffs_EXP1_transfer_autoreg"
+  artifact_root: "data/artifacts/EXP1_transfer_autoreg"
+
+split:
+  name: "EXP1_transfer_autoreg_reference"
+
+custom_split:
+  target_lake_test_start: "2026-01-01"

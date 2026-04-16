@@ -24,6 +24,20 @@ plt.rcParams.update(
 )
 
 
+COMPARISON_COLORS = [
+    "#1f77b4",
+    "#d62728",
+    "#2ca02c",
+    "#ff7f0e",
+    "#9467bd",
+    "#8c564b",
+]
+
+
+def _comparison_color(index: int) -> str:
+    return COMPARISON_COLORS[index % len(COMPARISON_COLORS)]
+
+
 def _finalize_figure(fig: plt.Figure, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(path, dpi=220, bbox_inches="tight")
@@ -220,9 +234,181 @@ def plot_prediction_distribution(predictions: pd.DataFrame, path: Path) -> None:
     _finalize_figure(fig, path)
 
 
+def create_comparison_metric_bars_figure(
+    metric_table: pd.DataFrame,
+    split: str,
+    experiment_names: list[str],
+) -> plt.Figure:
+    split_df = metric_table.loc[metric_table["split"] == split].copy()
+    metric_names = ["loss", "rmse", "mae", "r2", "bias", "negative_count"]
+    fig, axes = plt.subplots(3, 2, figsize=(14, 10.6))
+    x = np.arange(len(experiment_names))
+
+    for axis, metric_name in zip(axes.flatten(), metric_names):
+        values = [
+            float(
+                split_df.loc[split_df["experiment_name"] == experiment_name, metric_name].iloc[0]
+            )
+            for experiment_name in experiment_names
+        ]
+        bars = axis.bar(
+            x,
+            values,
+            color=[_comparison_color(index) for index in range(len(experiment_names))],
+            alpha=0.9,
+            edgecolor="white",
+            linewidth=0.6,
+        )
+        axis.set_title(f"{split.upper()} {metric_name.upper()}")
+        axis.set_xticks(x)
+        axis.set_xticklabels(experiment_names, rotation=15, ha="right")
+        axis.grid(True, axis="y", alpha=0.25)
+        if metric_name in {"loss", "rmse", "mae", "negative_count"}:
+            axis.set_ylim(bottom=0.0)
+        magnitude = max(1.0, max(abs(number) for number in values))
+        for bar, value in zip(bars, values):
+            offset = 0.03 * magnitude
+            axis.text(
+                bar.get_x() + bar.get_width() / 2.0,
+                value + offset if value >= 0 else value - offset,
+                _format_metric_value(metric_name, value),
+                ha="center",
+                va="bottom" if value >= 0 else "top",
+                fontsize=9,
+            )
+
+    fig.suptitle(f"{split.upper()} Metrics Comparison", fontsize=15, y=0.975)
+    fig.subplots_adjust(left=0.07, right=0.98, top=0.92, bottom=0.10, hspace=0.52, wspace=0.24)
+    return fig
+
+
+def create_comparison_timeseries_figure(
+    experiment_frames: dict[str, pd.DataFrame],
+    title: str,
+    start_datetime: str | pd.Timestamp | None = None,
+    end_datetime: str | pd.Timestamp | None = None,
+) -> plt.Figure:
+    fig, ax = plt.subplots(figsize=(12, 4.8))
+    observed_drawn = False
+
+    for index, (experiment_name, frame) in enumerate(experiment_frames.items()):
+        if frame.empty:
+            continue
+        plot_df = frame.copy()
+        plot_df["sample_datetime"] = pd.to_datetime(plot_df["sample_datetime"])
+        plot_df = plot_df.sort_values("sample_datetime")
+        if start_datetime is not None:
+            plot_df = plot_df.loc[plot_df["sample_datetime"] >= pd.Timestamp(start_datetime)]
+        if end_datetime is not None:
+            plot_df = plot_df.loc[plot_df["sample_datetime"] <= pd.Timestamp(end_datetime)]
+        if plot_df.empty:
+            continue
+
+        observed_df = plot_df.loc[plot_df["y_true"].notna()].copy()
+        if not observed_drawn and not observed_df.empty:
+            ax.plot(
+                observed_df["sample_datetime"],
+                observed_df["y_true"],
+                color="#111111",
+                linewidth=2.4,
+                marker="o",
+                markersize=4,
+                label="Observed",
+                zorder=4,
+            )
+            observed_drawn = True
+
+        color = _comparison_color(index)
+        ax.plot(
+            plot_df["sample_datetime"],
+            plot_df["y_pred"],
+            color=color,
+            linewidth=1.9,
+            marker="o",
+            markersize=3.4,
+            alpha=0.92,
+            label=experiment_name,
+            zorder=3,
+        )
+        ax.scatter(
+            plot_df["sample_datetime"],
+            plot_df["y_pred"],
+            color=color,
+            s=20,
+            alpha=0.9,
+            edgecolors="white",
+            linewidths=0.35,
+            zorder=5,
+        )
+
+    ax.set_title(title)
+    ax.set_xlabel("Datetime")
+    ax.set_ylabel("Ice thickness (m)")
+    ax.grid(True, alpha=0.25)
+    ax.legend(ncol=2)
+    fig.autofmt_xdate()
+    fig.tight_layout()
+    return fig
+
+
+def create_comparison_loss_curves_figure(histories: dict[str, pd.DataFrame]) -> plt.Figure:
+    fig, axes = plt.subplots(1, 2, figsize=(13.5, 4.5), sharex=True)
+    for axis, (column, title) in zip(axes, [("train_loss", "Train Loss"), ("val_loss", "Validation Loss")]):
+        for index, (experiment_name, history) in enumerate(histories.items()):
+            if history.empty or column not in history.columns:
+                continue
+            axis.plot(
+                history["epoch"],
+                history[column],
+                linewidth=2,
+                label=experiment_name,
+                color=_comparison_color(index),
+            )
+        axis.set_title(title)
+        axis.set_xlabel("Epoch")
+        axis.set_ylabel("Loss")
+        axis.grid(True, alpha=0.25)
+    axes[0].legend()
+    fig.suptitle("Training Curve Comparison", fontsize=15, y=1.02)
+    fig.tight_layout()
+    return fig
+
+
+def create_comparison_validation_metric_curves_figure(histories: dict[str, pd.DataFrame]) -> plt.Figure:
+    fig, axes = plt.subplots(1, 3, figsize=(15, 4.5), sharex=True)
+    for axis, (column, title) in zip(
+        axes,
+        [("val_rmse", "Validation RMSE"), ("val_mae", "Validation MAE"), ("val_r2", "Validation R2")],
+    ):
+        for index, (experiment_name, history) in enumerate(histories.items()):
+            if history.empty or column not in history.columns:
+                continue
+            axis.plot(
+                history["epoch"],
+                history[column],
+                linewidth=2,
+                label=experiment_name,
+                color=_comparison_color(index),
+            )
+        axis.set_title(title)
+        axis.set_xlabel("Epoch")
+        axis.grid(True, alpha=0.25)
+    axes[0].set_ylabel("Metric")
+    axes[0].legend()
+    fig.suptitle("Validation Metric Curve Comparison", fontsize=15, y=1.02)
+    fig.tight_layout()
+    return fig
+
+
 def _slugify(value: str) -> str:
     sanitized = "".join(character if character.isalnum() else "_" for character in value)
     return sanitized[:80]
+
+
+def _format_metric_value(metric_name: str, value: float) -> str:
+    if metric_name == "negative_count":
+        return str(int(round(value)))
+    return f"{value:.2f}"
 
 
 def _display_lake_name(value: str) -> str:

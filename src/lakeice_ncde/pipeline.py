@@ -27,7 +27,7 @@ from lakeice_ncde.models.neural_cde import build_model
 from lakeice_ncde.training.engine import Trainer
 from lakeice_ncde.utils.io import load_dataframe, save_dataframe, save_json as io_save_json
 from lakeice_ncde.utils.logging import setup_logging
-from lakeice_ncde.utils.paths import ProjectPaths, resolve_paths
+from lakeice_ncde.utils.paths import ProjectPaths, build_pdf_name, resolve_paths
 from lakeice_ncde.utils.seed import set_seed
 from lakeice_ncde.visualization.pdf_report import build_pdf_report
 
@@ -317,7 +317,8 @@ def train_experiment(
         "duration_seconds": summary["duration_seconds"],
         "run_dir": str(run_context.run_dir),
     }
-    append_experiment_registry(output_root or paths.output_root, registry_row)
+    if bool(config.get("experiment", {}).get("append_registry", True)):
+        append_experiment_registry(output_root or paths.output_root, registry_row)
     return run_context
 
 
@@ -331,7 +332,7 @@ def evaluate_run(run_dir: Path, logger) -> dict[str, Any]:
 
 def plot_from_run(run_dir: Path, logger) -> None:
     """Generate the consolidated PDF report for a run."""
-    pdf_path = run_dir / f"{run_dir.name}.pdf"
+    pdf_path = run_dir / build_pdf_name(run_dir.name)
     build_pdf_report(run_dir, pdf_path)
     logger.info("PDF report saved to %s", pdf_path)
 

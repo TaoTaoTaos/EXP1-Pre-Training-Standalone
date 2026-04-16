@@ -8,7 +8,7 @@ from lakeice_ncde.workflows.xiaoxingkai_transfer import _subsample_bundle_by_lak
 def test_subsample_bundle_keeps_physics_context_aligned(tmp_path) -> None:
     bundle_path = tmp_path / "train_windows.pt"
     bundle = {
-        "split_name": "EXP2_history_autoreg_stefan",
+        "split_name": "EXP2_transfer_autoreg_stefan",
         "split": "train",
         "windows": [torch.tensor([[float(index)]], dtype=torch.float32) for index in range(4)],
         "metadata": [

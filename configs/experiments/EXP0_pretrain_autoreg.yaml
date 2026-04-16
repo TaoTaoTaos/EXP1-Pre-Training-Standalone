@@ -1,0 +1,131 @@
+experiment:
+  name: "EXP0_pretrain_autoreg"
+  description: "Experiment 0: autoregressive pretraining on source lakes only, with Xiaoxingkai fully held out as test."
+
+paths:
+  raw_excel: "data/raw/LakeIce_ERA5_less60_XiaoxingkaiDaily12.xlsx"
+  prepared_csv: "data/interim/prepared_data_EXP0_pretrain_autoreg.csv"
+  validation_report_json: "data/artifacts/EXP0_pretrain_autoreg_validation_report.json"
+  feature_schema_json: "data/artifacts/EXP0_pretrain_autoreg_feature_schema.json"
+  split_root: "data/splits_EXP0_pretrain_autoreg"
+  window_root: "data/windows_EXP0_pretrain_autoreg"
+  coeff_root: "data/coeffs_EXP0_pretrain_autoreg"
+  artifact_root: "data/artifacts/EXP0_pretrain_autoreg"
+  output_root: "outputs/runs"
+
+data:
+  excel_sheet_name: "lakeice_era5"
+  lake_column: "lake_name"
+  lake_id_column: "lake_id"
+  datetime_column: "sample_datetime"
+  era5_datetime_column: "era5_datetime"
+  target_column: "total_ice_m"
+  doy_column: "doy"
+  latitude_column: "latitude"
+  longitude_column: "longitude"
+  include_lakes: null
+
+features:
+  time_channel_name: "relative_time"
+  cyclical_columns: []
+  feature_columns:
+    - "Ten_Meter_Elevation_Wind_Speed_meterPerSecond"
+    - "Air_Temperature_celsius"
+    - "Relative_Humidity_percent"
+    - "Shortwave_Radiation_Downwelling_wattPerMeterSquared"
+    - "Longwave_Radiation_Downwelling_wattPerMeterSquared"
+    - "Sea_Level_Barometric_Pressure_pascal"
+    - "Surface_Level_Barometric_Pressure_pascal"
+    - "Precipitation_millimeterPerDay"
+    - "Snowfall_millimeterPerDay"
+    - "ice_prev_m"
+    - "ice_prev_gap_days"
+    - "ice_prev_available"
+  target_transform: "none"
+  input_scaler: "standard"
+  exclude_target_from_inputs: true
+
+split:
+  strategy: "time_holdout"
+  name: "EXP0_pretrain_autoreg_reference"
+  seed: 42
+
+custom_split:
+  val_fraction: 0.3
+  min_val_rows_per_lake: 8
+  min_train_rows_per_lake: 24
+  max_train_windows_per_lake: 160
+  max_val_windows_per_lake: 20
+  target_lake_test_start: null
+
+coeffs:
+  interpolation: "hermite"
+
+seasonal_rollout:
+  enabled: true
+  autoregressive_history: true
+  target_lake_name: "Xiaoxingkai"
+  era5_csv: "data/raw/XXKH-St-UTC+8-ERA5-1980-202603-noNA.csv"
+  test_start_datetime: "2025-11-01 12:00:00"
+  end_datetime: "2026-03-31 12:00:00"
+  daily_hour: 12
+
+window:
+  window_days: 7
+  min_points: 2
+  anchor_on_every_observation: true
+  save_raw_windows: true
+
+model:
+  hidden_channels: 55
+  hidden_hidden_channels: 100
+  num_hidden_layers: 5
+  dropout: 0.05
+  method: "rk4"
+  use_adjoint: false
+  nonnegative_output: true
+
+train:
+  seed: 42
+  device: "auto"
+  batch_size: 16
+  batch_parallel: true
+  num_workers: 0
+  optimizer: "adamw"
+  learning_rate: 2.0e-4
+  weight_decay: 5.0e-4
+  max_epochs: 500
+  gradient_clip_norm: 0.5
+  loss: "huber"
+  huber_delta: 0.1
+  physics_loss:
+    enabled: false
+    rule: "stefan_growth_residual"
+    lambda_st: 0.01
+    lambda_nn: 1.0
+    init_kappa: 0.0090
+    min_prev_ice_m: 1.0e-3
+    grow_temp_threshold_celsius: -0.5
+    prev_ice_column: "ice_prev_m"
+    gap_days_column: "ice_prev_gap_days"
+    temperature_column: "Air_Temperature_celsius"
+    prev_available_column: "ice_prev_available"
+  early_stopping:
+    patience: 25
+    min_delta: 1.0e-5
+  scheduler:
+    name: "reduce_on_plateau"
+    factor: 0.5
+    patience: 8
+    min_lr: 1.0e-5
+
+eval:
+  plot_sample_windows: 4
+  interpolation_debug_points: 100
+  prediction_clip_min: 0.0
+  metrics:
+    - "rmse"
+    - "mae"
+    - "r2"
+    - "bias"
+    - "negative_count"

@@ -1,0 +1,6 @@
+split_name: EXP1_transfer_autoreg
+split: train
+bundle_path: S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\windows_EXP1_transfer_autoreg\EXP1_transfer_autoreg\train_windows.pt
+metadata_path: S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\windows_EXP1_transfer_autoreg\EXP1_transfer_autoreg\train_windows_metadata.csv
+feature_scaler_path: S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\windows_EXP1_transfer_autoreg\EXP1_transfer_autoreg\feature_scaler.yaml
+count: 220

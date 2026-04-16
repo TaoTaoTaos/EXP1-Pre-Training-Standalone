@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import html
 import json
 from io import BytesIO
+from math import ceil
 from pathlib import Path
 from typing import Any
 
@@ -13,7 +15,7 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
-from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import Image, KeepTogether, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from lakeice_ncde.data.windowing import _build_single_window
 from lakeice_ncde.visualization.plots import (
@@ -26,6 +28,8 @@ from lakeice_ncde.visualization.plots import (
 
 
 XIAOXINGKAI_NAME = "【Li】Lake Xiaoxingkai"
+
+XIAOXINGKAI_NAME = "[Li] Lake Xiaoxingkai"
 
 
 def build_pdf_report(run_dir: Path, pdf_path: Path) -> None:
@@ -49,13 +53,9 @@ def build_pdf_report(run_dir: Path, pdf_path: Path) -> None:
     story.append(PageBreak())
     story.extend(_build_setup_section(report_data, styles))
     story.append(PageBreak())
-    story.extend(_build_data_selection_section(report_data, styles))
-    story.append(PageBreak())
     story.extend(_build_figures_section(report_data, styles))
-    seasonal_rollout = report_data.get("seasonal_rollout_predictions")
-    if seasonal_rollout is not None and not seasonal_rollout.empty:
-        story.append(PageBreak())
-        story.extend(_build_seasonal_rollout_section(report_data, styles))
+    story.append(PageBreak())
+    story.extend(_build_data_selection_section(report_data, styles))
 
     doc.build(story, onFirstPage=_draw_page_number, onLaterPages=_draw_page_number)
 
@@ -92,6 +92,15 @@ def _build_styles():
             spaceAfter=4,
         )
     )
+    styles.add(
+        ParagraphStyle(
+            name="BodyCompact",
+            parent=styles["BodyText"],
+            fontSize=8.6,
+            leading=10.2,
+            spaceAfter=0,
+        )
+    )
     return styles
 
 
@@ -100,6 +109,7 @@ def _build_cover_section(report_data: dict[str, Any], styles) -> list[Any]:
     per_lake_df = report_data["per_lake_metrics"]
     summary = report_data["run_summary"]
     diagnostics = report_data["diagnostics"]
+    seasonal_rollout_overview = report_data["seasonal_rollout_overview"]
 
     story: list[Any] = [
         Paragraph(f"{report_data['experiment_name']} Result Report", styles["ReportTitle"]),
@@ -133,32 +143,67 @@ def _build_cover_section(report_data: dict[str, Any], styles) -> list[Any]:
     story.append(overall_table)
     story.append(Spacer(1, 10))
 
-    story.append(Paragraph("Per-Lake Numeric Evaluation Summary", styles["SectionHeading"]))
-    lake_rows = [["Lake", "Count", "RMSE", "MAE", "R2", "Bias"]]
-    for _, row in per_lake_df.iterrows():
-        lake_rows.append(
-            [
-                _safe_lake_label(row["lake_name"]),
-                str(int(row["count"])),
-                f"{row['rmse']:.4f}",
-                f"{row['mae']:.4f}",
-                f"{row['r2']:.4f}",
-                f"{row['bias']:.4f}",
-            ]
-        )
-    story.append(_styled_table(lake_rows, col_widths=[3.4, 0.8, 1.0, 1.0, 1.2, 1.0]))
-    story.append(Spacer(1, 10))
+    if len(per_lake_df) > 1:
+        story.append(Paragraph("Per-Lake Evaluation Summary", styles["SectionHeading"]))
+        lake_rows = [["Lake", "Count", "RMSE", "MAE", "R2", "Bias"]]
+        for _, row in per_lake_df.iterrows():
+            lake_rows.append(
+                [
+                    _safe_lake_label(row["lake_name"]),
+                    str(int(row["count"])),
+                    f"{row['rmse']:.4f}",
+                    f"{row['mae']:.4f}",
+                    f"{row['r2']:.4f}",
+                    f"{row['bias']:.4f}",
+                ]
+            )
+        story.append(_styled_table(lake_rows, col_widths=[3.4, 0.8, 1.0, 1.0, 1.2, 1.0]))
+        story.append(Spacer(1, 10))
 
     story.append(Paragraph("Key Diagnostic Notes", styles["SectionHeading"]))
-    diagnostic_lines = [
-        f"Best epoch: {summary['best_epoch']}",
-        f"Observed evaluation mean/std: {diagnostics['eval_true_mean']:.4f} / {diagnostics['eval_true_std']:.4f}",
-        f"Predicted evaluation mean/std: {diagnostics['eval_pred_mean']:.4f} / {diagnostics['eval_pred_std']:.4f}",
-        f"Validation windows: {diagnostics['val_window_count']} | Seasonal-rollout test points: {diagnostics['test_window_count']}",
-        "Interpretation: if predicted std is much smaller than observed std, the model is behaving too conservatively and is under-expressing peak-to-trough variation.",
+    diagnostic_pairs = [
+        ("Best epoch", str(summary["best_epoch"])),
+        ("Validation windows", str(diagnostics["val_window_count"])),
+        (
+            "Observed evaluation mean/std",
+            f"{diagnostics['eval_true_mean']:.4f} / {diagnostics['eval_true_std']:.4f}",
+        ),
+        (
+            "Predicted evaluation mean/std",
+            f"{diagnostics['eval_pred_mean']:.4f} / {diagnostics['eval_pred_std']:.4f}",
+        ),
     ]
-    for line in diagnostic_lines:
-        story.append(Paragraph(line, styles["BodySmall"]))
+    if seasonal_rollout_overview:
+        diagnostic_pairs.extend(
+            [
+                ("Seasonal-rollout overlap points", str(seasonal_rollout_overview["overlap_rows"])),
+                (
+                    "Seasonal-rollout span",
+                    f"{seasonal_rollout_overview['rollout_start']} to {seasonal_rollout_overview['rollout_end']}",
+                ),
+                (
+                    "Observed overlap span",
+                    f"{seasonal_rollout_overview['overlap_start']} to {seasonal_rollout_overview['overlap_end']}",
+                ),
+            ]
+        )
+    story.append(
+        _build_key_value_pairs_table(
+            diagnostic_pairs,
+            styles=styles,
+            col_widths=[2.0, 3.0, 2.0, 3.0],
+            font_size=8.4,
+            left_columns=[0, 1, 2, 3],
+            center_columns=[],
+        )
+    )
+    story.append(Spacer(1, 8))
+    story.append(
+        Paragraph(
+            "Interpretation: if predicted std is much smaller than observed std, the model is behaving too conservatively and is under-expressing peak-to-trough variation.",
+            styles["BodySmall"],
+        )
+    )
     return story
 
 
@@ -178,54 +223,72 @@ def _build_setup_section(report_data: dict[str, Any], styles) -> list[Any]:
     ]
 
     channel_lines = [f"{index + 1}. {column}" for index, column in enumerate(feature_columns)]
-    for line in channel_lines:
-        story.append(Paragraph(line, styles["BodySmall"]))
+    story.append(_build_two_column_text_table(channel_lines, styles=styles, col_widths=[4.9, 4.9]))
 
     story.append(Spacer(1, 10))
     story.append(Paragraph("Core Training Configuration", styles["Heading3"]))
-    config_rows = [
-        ["Field", "Value"],
-        ["window.window_days", str(config["window"]["window_days"])],
-        ["coeffs.interpolation", str(config["coeffs"]["interpolation"])],
-        ["model.method", str(config["model"]["method"])],
-        ["model.hidden_channels", str(config["model"]["hidden_channels"])],
-        ["model.hidden_hidden_channels", str(config["model"]["hidden_hidden_channels"])],
-        ["model.num_hidden_layers", str(config["model"]["num_hidden_layers"])],
-        ["train.batch_size", str(config["train"]["batch_size"])],
-        ["train.learning_rate", str(config["train"]["learning_rate"])],
-        ["train.weight_decay", str(config["train"]["weight_decay"])],
-        ["train.loss", str(config["train"]["loss"])],
-        ["train.huber_delta", str(config["train"]["huber_delta"])],
-        ["train.max_epochs", str(config["train"]["max_epochs"])],
-        ["train.gradient_clip_norm", str(config["train"]["gradient_clip_norm"])],
-        ["custom_split.val_fraction", str(config["custom_split"]["val_fraction"])],
-        ["custom_split.min_train_rows_per_lake", str(config["custom_split"]["min_train_rows_per_lake"])],
-        ["custom_split.min_val_rows_per_lake", str(config["custom_split"]["min_val_rows_per_lake"])],
-        ["custom_split.max_train_windows_per_lake", str(config["custom_split"]["max_train_windows_per_lake"])],
-        ["custom_split.max_val_windows_per_lake", str(config["custom_split"]["max_val_windows_per_lake"])],
-        ["custom_split.target_lake_test_start", str(config["custom_split"].get("target_lake_test_start", "none"))],
+    config_pairs = [
+        ("window.window_days", str(config["window"]["window_days"])),
+        ("coeffs.interpolation", str(config["coeffs"]["interpolation"])),
+        ("model.method", str(config["model"]["method"])),
+        ("model.hidden_channels", str(config["model"]["hidden_channels"])),
+        ("model.hidden_hidden_channels", str(config["model"]["hidden_hidden_channels"])),
+        ("model.num_hidden_layers", str(config["model"]["num_hidden_layers"])),
+        ("train.batch_size", str(config["train"]["batch_size"])),
+        ("train.learning_rate", str(config["train"]["learning_rate"])),
+        ("train.weight_decay", str(config["train"]["weight_decay"])),
+        ("train.loss", str(config["train"]["loss"])),
+        ("train.huber_delta", str(config["train"]["huber_delta"])),
+        ("train.max_epochs", str(config["train"]["max_epochs"])),
+        ("train.gradient_clip_norm", str(config["train"]["gradient_clip_norm"])),
+        ("custom_split.val_fraction", str(config["custom_split"]["val_fraction"])),
+        ("custom_split.min_train_rows_per_lake", str(config["custom_split"]["min_train_rows_per_lake"])),
+        ("custom_split.min_val_rows_per_lake", str(config["custom_split"]["min_val_rows_per_lake"])),
+        ("custom_split.max_train_windows_per_lake", str(config["custom_split"]["max_train_windows_per_lake"])),
+        ("custom_split.max_val_windows_per_lake", str(config["custom_split"]["max_val_windows_per_lake"])),
+        ("custom_split.target_lake_test_start", str(config["custom_split"].get("target_lake_test_start", "none"))),
     ]
-    story.append(_styled_table(config_rows, col_widths=[3.2, 4.2]))
+    story.append(
+        _build_key_value_pairs_table(
+            config_pairs,
+            styles=styles,
+            col_widths=[2.6, 1.7, 2.6, 1.7],
+            font_size=8.2,
+            left_columns=[0, 2],
+            center_columns=[1, 3],
+        )
+    )
 
     physics_cfg = config["train"].get("physics_loss", {})
     if physics_cfg.get("enabled", False):
         story.append(Spacer(1, 10))
         story.append(Paragraph("Physics Loss Configuration", styles["Heading3"]))
-        physics_rows = [
-            ["Field", "Value"],
-            ["train.physics_loss.rule", str(physics_cfg.get("rule", "none"))],
-            ["train.physics_loss.lambda_st", str(physics_cfg.get("lambda_st", "n/a"))],
-            ["train.physics_loss.lambda_nn", str(physics_cfg.get("lambda_nn", "n/a"))],
-            ["train.physics_loss.init_kappa", str(physics_cfg.get("init_kappa", "n/a"))],
-            ["run_summary.physics_kappa", str(run_summary.get("physics_kappa", "n/a"))],
-            ["train.physics_loss.min_prev_ice_m", str(physics_cfg.get("min_prev_ice_m", "n/a"))],
-            ["train.physics_loss.grow_temp_threshold_celsius", str(physics_cfg.get("grow_temp_threshold_celsius", "n/a"))],
-            ["train.physics_loss.prev_ice_column", str(physics_cfg.get("prev_ice_column", "n/a"))],
-            ["train.physics_loss.gap_days_column", str(physics_cfg.get("gap_days_column", "n/a"))],
-            ["train.physics_loss.temperature_column", str(physics_cfg.get("temperature_column", "n/a"))],
-            ["train.physics_loss.prev_available_column", str(physics_cfg.get("prev_available_column", "n/a"))],
+        physics_pairs = [
+            ("train.physics_loss.rule", str(physics_cfg.get("rule", "none"))),
+            ("train.physics_loss.lambda_st", str(physics_cfg.get("lambda_st", "n/a"))),
+            ("train.physics_loss.lambda_nn", str(physics_cfg.get("lambda_nn", "n/a"))),
+            ("train.physics_loss.init_kappa", str(physics_cfg.get("init_kappa", "n/a"))),
+            ("run_summary.physics_kappa", str(run_summary.get("physics_kappa", "n/a"))),
+            ("train.physics_loss.min_prev_ice_m", str(physics_cfg.get("min_prev_ice_m", "n/a"))),
+            (
+                "train.physics_loss.grow_temp_threshold_celsius",
+                str(physics_cfg.get("grow_temp_threshold_celsius", "n/a")),
+            ),
+            ("train.physics_loss.prev_ice_column", str(physics_cfg.get("prev_ice_column", "n/a"))),
+            ("train.physics_loss.gap_days_column", str(physics_cfg.get("gap_days_column", "n/a"))),
+            ("train.physics_loss.temperature_column", str(physics_cfg.get("temperature_column", "n/a"))),
+            ("train.physics_loss.prev_available_column", str(physics_cfg.get("prev_available_column", "n/a"))),
         ]
-        story.append(_styled_table(physics_rows, col_widths=[3.2, 4.2]))
+        story.append(
+            _build_key_value_pairs_table(
+                physics_pairs,
+                styles=styles,
+                col_widths=[2.6, 1.7, 2.6, 1.7],
+                font_size=8.2,
+                left_columns=[0, 2],
+                center_columns=[1, 3],
+            )
+        )
     return story
 
 
@@ -235,13 +298,13 @@ def _build_data_selection_section(report_data: dict[str, Any], styles) -> list[A
     totals = report_data["totals"]
 
     story: list[Any] = [
-        Paragraph("1. Source-Lake Selection, Windowing, And Balance Effects", styles["SectionHeading"]),
+        Paragraph("2. Lake Selection, Windowing, And Balance Effects", styles["SectionHeading"]),
         Paragraph(
             f"Each source lake is first split by time into train/val. The target lake {_safe_lake_label(report_data['target_lake_label'])} is split so that rows before the cutoff are further divided into train/val, while rows from the cutoff onward are withheld from training and only used later as observation checkpoints for seasonal-rollout testing. A row only becomes a valid training or validation window if there are at least two observations inside the {report_data['config']['window']['window_days']}-day lookback. After that, train and val windows are capped per lake for balance.",
             styles["BodyText"],
         ),
         Spacer(1, 8),
-        Paragraph("Row Assignment Counts From The Source File", styles["Heading3"]),
+        Paragraph("Lake Selection Counts From The Source File", styles["Heading3"]),
     ]
 
     row_table = [["Lake", "Rows In Source", "Train Rows", "Val Rows", "Withheld Test Rows"]]
@@ -255,7 +318,7 @@ def _build_data_selection_section(report_data: dict[str, Any], styles) -> list[A
                 str(int(row["test_rows"])),
             ]
         )
-    story.append(_styled_table(row_table, col_widths=[3.5, 1.1, 1.0, 1.0, 1.0]))
+    story.append(_styled_table(row_table, col_widths=[3.5, 1.1, 1.0, 1.0, 1.0], font_size=8.3))
     story.append(Spacer(1, 10))
 
     story.append(Paragraph("Window Eligibility And Balance Effects", styles["Heading3"]))
@@ -266,6 +329,7 @@ def _build_data_selection_section(report_data: dict[str, Any], styles) -> list[A
             "Train Kept",
             "Val Valid",
             "Val Kept",
+            "Test Kept",
             "Median Points",
         ]
     ]
@@ -277,44 +341,110 @@ def _build_data_selection_section(report_data: dict[str, Any], styles) -> list[A
                 str(int(row["train_post_balance"])),
                 str(int(row["val_pre_balance"])),
                 str(int(row["val_post_balance"])),
+                str(int(row["test_post_balance"])),
                 f"{row['median_window_points']:.1f}",
             ]
         )
-    story.append(_styled_table(window_table, col_widths=[3.2, 1.0, 0.9, 1.0, 0.9, 1.0], font_size=8.5))
+    story.append(
+        _styled_table(
+            window_table,
+            col_widths=[3.0, 0.95, 0.85, 0.95, 0.85, 0.85, 1.0],
+            font_size=8.0,
+        )
+    )
     story.append(Spacer(1, 10))
 
     story.append(Paragraph("Total Counts", styles["Heading3"]))
-    total_lines = [
-        f"Total included source rows: {totals['source_rows']}",
-        f"Total train rows / val rows / test rows: {totals['train_rows']} / {totals['val_rows']} / {totals['test_rows']}",
-        f"Total train windows before/after balance: {totals['train_pre_balance']} / {totals['train_post_balance']}",
-        f"Total val windows before/after balance: {totals['val_pre_balance']} / {totals['val_post_balance']}",
-        "Held-out target rows are evaluated only through seasonal-rollout overlap, not as standalone test windows.",
+    total_pairs = [
+        ("Total included source rows", str(totals["source_rows"])),
+        ("Train / val / test rows", f"{totals['train_rows']} / {totals['val_rows']} / {totals['test_rows']}"),
+        ("Train windows before / after balance", f"{totals['train_pre_balance']} / {totals['train_post_balance']}"),
+        ("Val windows before / after balance", f"{totals['val_pre_balance']} / {totals['val_post_balance']}"),
+        ("Held-out test windows", str(totals["test_post_balance"])),
     ]
-    for line in total_lines:
-        story.append(Paragraph(line, styles["BodySmall"]))
+    story.append(
+        _build_key_value_pairs_table(
+            total_pairs,
+            styles=styles,
+            col_widths=[2.5, 2.4, 2.5, 2.4],
+            font_size=8.4,
+            left_columns=[0, 1, 2, 3],
+            center_columns=[],
+        )
+    )
+    story.append(Spacer(1, 8))
+    story.append(
+        Paragraph(
+            "Held-out target rows are evaluated only through seasonal-rollout overlap, not as standalone test windows.",
+            styles["BodySmall"],
+        )
+    )
     return story
 
 
 def _build_figures_section(report_data: dict[str, Any], styles) -> list[Any]:
     history = report_data["history"]
-    test_predictions = report_data["test_predictions"]
-    safe_test_lake = report_data["target_lake_label"]
+    evaluation_predictions = report_data["test_predictions"]
+    seasonal_rollout_predictions = report_data["seasonal_rollout_predictions"]
+    seasonal_overlap_predictions = report_data["seasonal_rollout_overlap_predictions"]
+    target_lake = report_data["target_lake_label"]
 
-    story: list[Any] = [Paragraph("2. Core Result Figures", styles["SectionHeading"])]
+    story: list[Any] = [Paragraph("1. Core Result Figures", styles["SectionHeading"])]
 
-    figures = [
-        ("Training loss curve", create_loss_curves_figure(history)),
-        ("Validation metric curves", create_metric_curves_figure(history)),
-        ("Evaluation predicted vs observed", create_pred_vs_obs_figure(test_predictions)),
-        ("Xiaoxingkai evaluation time series", create_lake_timeseries_figure(test_predictions, safe_test_lake)),
-        ("Prediction vs observation distribution", create_prediction_distribution_figure(test_predictions)),
+    figure_groups: list[list[tuple[str, Any]]] = [
+        [
+            ("Training loss curve", create_loss_curves_figure(history)),
+            ("Validation metric curves", create_metric_curves_figure(history)),
+        ]
     ]
 
-    for title, fig in figures:
-        story.append(Paragraph(title, styles["Heading3"]))
-        story.append(_figure_to_reportlab_image(fig, max_width=9.6 * inch))
-        story.append(Spacer(1, 8))
+    if seasonal_rollout_predictions is not None and not seasonal_rollout_predictions.empty:
+        seasonal_group = [
+            ("Seasonal rollout time series", create_lake_timeseries_figure(seasonal_rollout_predictions, target_lake))
+        ]
+        if seasonal_overlap_predictions is not None and not seasonal_overlap_predictions.empty:
+            observed_start = seasonal_overlap_predictions["sample_datetime"].min()
+            observed_end = seasonal_overlap_predictions["sample_datetime"].max()
+            seasonal_group.append(
+                (
+                    "Seasonal rollout focus on observed date range",
+                    create_lake_timeseries_figure(
+                        seasonal_rollout_predictions,
+                        target_lake,
+                        start_datetime=observed_start,
+                        end_datetime=observed_end,
+                        title="Seasonal Rollout Focus On Observed Date Range",
+                    ),
+                )
+            )
+        figure_groups.append(seasonal_group)
+
+    if evaluation_predictions is not None and not evaluation_predictions.empty:
+        figure_groups.append(
+            [
+                ("Evaluation predicted vs observed", create_pred_vs_obs_figure(evaluation_predictions)),
+                ("Prediction vs observation distribution", create_prediction_distribution_figure(evaluation_predictions)),
+            ]
+        )
+
+    if (
+        seasonal_overlap_predictions is not None
+        and not seasonal_overlap_predictions.empty
+        and not _prediction_frames_match(evaluation_predictions, seasonal_overlap_predictions)
+    ):
+        figure_groups.append(
+            [("Seasonal rollout overlap: predicted vs observed", create_pred_vs_obs_figure(seasonal_overlap_predictions))]
+        )
+
+    for group_index, figure_group in enumerate(figure_groups):
+        figure_block: list[Any] = []
+        for figure_index, (title, fig) in enumerate(figure_group):
+            figure_block.extend(_build_figure_block(title, fig, styles))
+            if figure_index != len(figure_group) - 1:
+                figure_block.append(Spacer(1, 8))
+        story.append(KeepTogether(figure_block))
+        if group_index != len(figure_groups) - 1:
+            story.append(Spacer(1, 10))
     return story
 
 
@@ -402,6 +532,18 @@ def _collect_report_data(run_dir: Path) -> dict[str, Any]:
         if seasonal_rollout_predictions_path.exists()
         else pd.DataFrame()
     )
+    seasonal_rollout_overlap_predictions_path = run_dir / "seasonal_rollout_overlap_predictions.csv"
+    if seasonal_rollout_overlap_predictions_path.exists():
+        seasonal_rollout_overlap_predictions = pd.read_csv(
+            seasonal_rollout_overlap_predictions_path,
+            parse_dates=["sample_datetime"],
+        )
+    elif not seasonal_rollout_predictions.empty and "y_true" in seasonal_rollout_predictions.columns:
+        seasonal_rollout_overlap_predictions = seasonal_rollout_predictions.loc[
+            seasonal_rollout_predictions["y_true"].notna()
+        ].copy()
+    else:
+        seasonal_rollout_overlap_predictions = pd.DataFrame()
     seasonal_rollout_overlap_metrics_path = run_dir / "seasonal_rollout_overlap_metrics.json"
     seasonal_rollout_overlap_metrics = (
         json.loads(seasonal_rollout_overlap_metrics_path.read_text(encoding="utf-8"))
@@ -434,6 +576,20 @@ def _collect_report_data(run_dir: Path) -> dict[str, Any]:
         "val_window_count": int(len(val_predictions)),
         "test_window_count": int(len(test_predictions)),
     }
+    seasonal_rollout_overview: dict[str, Any] = {}
+    if not seasonal_rollout_predictions.empty:
+        overlap_start = "none"
+        overlap_end = "none"
+        if not seasonal_rollout_overlap_predictions.empty:
+            overlap_start = str(seasonal_rollout_overlap_predictions["sample_datetime"].min())
+            overlap_end = str(seasonal_rollout_overlap_predictions["sample_datetime"].max())
+        seasonal_rollout_overview = {
+            "rollout_start": str(seasonal_rollout_predictions["sample_datetime"].min()),
+            "rollout_end": str(seasonal_rollout_predictions["sample_datetime"].max()),
+            "overlap_start": overlap_start,
+            "overlap_end": overlap_end,
+            "overlap_rows": int(len(seasonal_rollout_overlap_predictions)),
+        }
 
     raw_excel = (project_root / config["paths"]["raw_excel"]).resolve()
     target_lake_label = (
@@ -448,6 +604,7 @@ def _collect_report_data(run_dir: Path) -> dict[str, Any]:
         "history": history,
         "test_predictions": evaluation_predictions,
         "seasonal_rollout_predictions": seasonal_rollout_predictions,
+        "seasonal_rollout_overlap_predictions": seasonal_rollout_overlap_predictions,
         "seasonal_rollout_overlap_metrics": seasonal_rollout_overlap_metrics,
         "per_lake_metrics": per_lake_metrics,
         "run_summary": run_summary,
@@ -455,6 +612,7 @@ def _collect_report_data(run_dir: Path) -> dict[str, Any]:
         "window_stats": window_stats,
         "totals": totals,
         "diagnostics": diagnostics,
+        "seasonal_rollout_overview": seasonal_rollout_overview,
         "target_lake_label": target_lake_label,
     }
 
@@ -691,3 +849,138 @@ def _draw_page_number(canvas, doc) -> None:
     canvas.setFillColor(colors.HexColor("#566573"))
     canvas.drawRightString(doc.pagesize[0] - 0.45 * inch, 0.28 * inch, f"Page {doc.page}")
     canvas.restoreState()
+
+
+def _table_paragraph(text: str, style) -> Paragraph:
+    return Paragraph(html.escape(str(text)).replace("\n", "<br/>"), style)
+
+
+def _build_two_column_text_table(items: list[str], styles, col_widths: list[float]) -> Table:
+    half = ceil(len(items) / 2)
+    rows: list[list[Any]] = []
+    for row_index in range(half):
+        left_item = _table_paragraph(items[row_index], styles["BodyCompact"])
+        right_index = row_index + half
+        right_item: Any = ""
+        if right_index < len(items):
+            right_item = _table_paragraph(items[right_index], styles["BodyCompact"])
+        rows.append([left_item, right_item])
+
+    table = Table(rows, colWidths=[width * inch for width in col_widths])
+    table.setStyle(
+        TableStyle(
+            [
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 12),
+                ("TOPPADDING", (0, 0), (-1, -1), 2),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+            ]
+        )
+    )
+    return table
+
+
+def _build_key_value_pairs_table(
+    pairs: list[tuple[str, str]],
+    styles,
+    col_widths: list[float],
+    font_size: float,
+    left_columns: list[int],
+    center_columns: list[int],
+) -> Table:
+    rows: list[list[Any]] = [["Field", "Value", "Field", "Value"]]
+    for start_index in range(0, len(pairs), 2):
+        row: list[Any] = []
+        for offset in range(2):
+            pair_index = start_index + offset
+            if pair_index < len(pairs):
+                field, value = pairs[pair_index]
+                row.extend(
+                    [
+                        _table_paragraph(field, styles["BodyCompact"]),
+                        _table_paragraph(value, styles["BodyCompact"]),
+                    ]
+                )
+            else:
+                row.extend(["", ""])
+        rows.append(row)
+    return _styled_table(
+        rows,
+        col_widths=col_widths,
+        font_size=font_size,
+        left_columns=left_columns,
+        center_columns=center_columns,
+    )
+
+
+def _build_figure_block(title: str, fig, styles) -> list[Any]:
+    return [
+        Paragraph(title, styles["Heading3"]),
+        _figure_to_reportlab_image(fig, max_width=10.0 * inch, max_height=2.85 * inch),
+    ]
+
+
+def _prediction_frames_match(left_df: pd.DataFrame, right_df: pd.DataFrame) -> bool:
+    if left_df is None or right_df is None or left_df.empty or right_df.empty or len(left_df) != len(right_df):
+        return False
+
+    comparison_columns = ["sample_datetime", "lake_name", "y_true", "y_pred"]
+    if any(column not in left_df.columns or column not in right_df.columns for column in comparison_columns):
+        return False
+
+    left_sorted = left_df[comparison_columns].sort_values(["sample_datetime", "lake_name"]).reset_index(drop=True).copy()
+    right_sorted = right_df[comparison_columns].sort_values(["sample_datetime", "lake_name"]).reset_index(drop=True).copy()
+    left_sorted["sample_datetime"] = left_sorted["sample_datetime"].astype(str)
+    right_sorted["sample_datetime"] = right_sorted["sample_datetime"].astype(str)
+
+    metadata_matches = left_sorted[["sample_datetime", "lake_name"]].equals(right_sorted[["sample_datetime", "lake_name"]])
+    numeric_matches = np.allclose(
+        left_sorted[["y_true", "y_pred"]].to_numpy(dtype=float),
+        right_sorted[["y_true", "y_pred"]].to_numpy(dtype=float),
+        equal_nan=True,
+    )
+    return bool(metadata_matches and numeric_matches)
+
+
+def _styled_table(
+    rows: list[list[Any]],
+    col_widths: list[float],
+    font_size: float = 9.0,
+    left_columns: list[int] | None = None,
+    center_columns: list[int] | None = None,
+) -> Table:
+    if not rows:
+        raise ValueError("Table rows must not be empty.")
+
+    column_count = len(rows[0])
+    left_columns = [0] if left_columns is None else left_columns
+    center_columns = (
+        [column_index for column_index in range(column_count) if column_index not in left_columns]
+        if center_columns is None
+        else center_columns
+    )
+
+    table = Table(rows, colWidths=[width * inch for width in col_widths], repeatRows=1)
+    table_styles = [
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#17324d")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), font_size),
+        ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#7f8fa6")),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f5f7fa")]),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("TOPPADDING", (0, 0), (-1, -1), 5),
+    ]
+    for column_index in left_columns:
+        table_styles.append(("ALIGN", (column_index, 1), (column_index, -1), "LEFT"))
+    for column_index in center_columns:
+        table_styles.append(("ALIGN", (column_index, 1), (column_index, -1), "CENTER"))
+    table.setStyle(TableStyle(table_styles))
+    return table
+
+
+def _safe_lake_label(value: str) -> str:
+    text = str(value)
+    return text.replace("【", "[").replace("】", "] ").replace("  ", " ").strip()

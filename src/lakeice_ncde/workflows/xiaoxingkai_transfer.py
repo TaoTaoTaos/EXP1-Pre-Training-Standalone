@@ -637,7 +637,8 @@ def run(config: dict, paths, base_logger) -> dict[str, Any]:
         "duration_seconds": summary["duration_seconds"],
         "run_dir": str(run_context.run_dir),
     }
-    append_experiment_registry(paths.output_root, registry_row)
+    if bool(config.get("experiment", {}).get("append_registry", True)):
+        append_experiment_registry(paths.output_root, registry_row)
 
     metrics_df = load_dataframe(artifacts.metrics_path)
     test_rows = metrics_df.loc[metrics_df["split"] == "test"]

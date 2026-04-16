@@ -1,7 +1,7 @@
 experiment:
   name: "xiaoxingkai_transfer"
   description: "Standalone Neural CDE transfer training for held-out Xiaoxingkai prediction."
-  save_figures: true
+  save_figures: false
   save_pdf_report: true
 
 debug:

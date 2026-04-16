@@ -1,0 +1,43 @@
+split_name: EXP0_pretrain_autoreg
+split_type: target_lake_temporal_holdout
+target_lake: 【Li】Lake Xiaoxingkai
+train_lakes:
+- 【Huo】Lake Hnagzhang
+- 【Huo】Lake Ulansu
+- 【IISD Experimental】Lake 239
+- 【IISD Experimental】Lake 302
+- 【North Temperate Lakes LTER】Allequash Lake
+- 【North Temperate Lakes LTER】Big Muskellunge Lake
+- 【North Temperate Lakes LTER】Bog 12-15 (Trout Bog)
+- 【North Temperate Lakes LTER】Bog 27-2 (Crystal Bog)
+- 【North Temperate Lakes LTER】Crystal Lake (NTL)
+- 【North Temperate Lakes LTER】Sparkling Lake
+- 【North Temperate Lakes LTER】Trout Lake
+splits:
+  train:
+  - 【Huo】Lake Hnagzhang
+  - 【Huo】Lake Ulansu
+  - 【IISD Experimental】Lake 239
+  - 【IISD Experimental】Lake 302
+  - 【North Temperate Lakes LTER】Allequash Lake
+  - 【North Temperate Lakes LTER】Big Muskellunge Lake
+  - 【North Temperate Lakes LTER】Bog 12-15 (Trout Bog)
+  - 【North Temperate Lakes LTER】Bog 27-2 (Crystal Bog)
+  - 【North Temperate Lakes LTER】Crystal Lake (NTL)
+  - 【North Temperate Lakes LTER】Sparkling Lake
+  - 【North Temperate Lakes LTER】Trout Lake
+  val:
+  - 【Huo】Lake Hnagzhang
+  - 【Huo】Lake Ulansu
+  - 【IISD Experimental】Lake 239
+  - 【IISD Experimental】Lake 302
+  - 【North Temperate Lakes LTER】Allequash Lake
+  - 【North Temperate Lakes LTER】Big Muskellunge Lake
+  - 【North Temperate Lakes LTER】Bog 12-15 (Trout Bog)
+  - 【North Temperate Lakes LTER】Bog 27-2 (Crystal Bog)
+  - 【North Temperate Lakes LTER】Crystal Lake (NTL)
+  - 【North Temperate Lakes LTER】Sparkling Lake
+  - 【North Temperate Lakes LTER】Trout Lake
+  test:
+  - 【Li】Lake Xiaoxingkai
+assignment_file: S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\splits_EXP0_pretrain_autoreg\EXP0_pretrain_autoreg\lake_assignments.csv

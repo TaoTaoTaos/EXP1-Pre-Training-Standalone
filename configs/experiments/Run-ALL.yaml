@@ -1,0 +1,13 @@
+experiment:
+  name: "Run-ALL"
+  description: "Parallel batch runner for the current Xiaoxingkai experiment suite."
+
+paths:
+  output_root: "outputs/runs"
+
+batch:
+  max_workers: 3
+  experiments:
+    - config: "EXP0_pretrain_autoreg.yaml"
+    - config: "EXP1_transfer_autoreg.yaml"
+    - config: "EXP2_transfer_autoreg_stefan.yaml"

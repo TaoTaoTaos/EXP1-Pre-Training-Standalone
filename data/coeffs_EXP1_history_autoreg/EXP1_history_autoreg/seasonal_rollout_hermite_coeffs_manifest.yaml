@@ -1,0 +1,6 @@
+split_name: EXP1_history_autoreg
+split: seasonal_rollout
+interpolation: hermite
+bundle_path: S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\coeffs_EXP1_history_autoreg\EXP1_history_autoreg\seasonal_rollout_hermite_coeffs.pt
+metadata_path: S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\coeffs_EXP1_history_autoreg\EXP1_history_autoreg\seasonal_rollout_hermite_coeffs_metadata.csv
+count: 163
