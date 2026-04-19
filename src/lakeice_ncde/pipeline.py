@@ -408,7 +408,11 @@ def evaluate_run(run_dir: Path, logger) -> dict[str, Any]:
 def plot_from_run(run_dir: Path, logger) -> None:
     """Generate the consolidated PDF report for a run."""
     pdf_path = run_dir / build_pdf_name(run_dir.name)
-    build_pdf_report(run_dir, pdf_path)
+    try:
+        build_pdf_report(run_dir, pdf_path)
+    except Exception:
+        logger.exception("Failed to build PDF report for %s", run_dir)
+        return
     logger.info("PDF report saved to %s", pdf_path)
 
 

@@ -17,6 +17,7 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.platypus import Image, KeepTogether, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+from lakeice_ncde.data.load_excel import filter_include_lakes, load_raw_excel, standardize_dataframe
 from lakeice_ncde.data.windowing import _build_single_window
 from lakeice_ncde.visualization.plots import (
     create_lake_timeseries_figure,
@@ -551,9 +552,7 @@ def _collect_report_data(run_dir: Path) -> dict[str, Any]:
         else {}
     )
 
-    project_root = Path(config["runtime"]["project_root"])
-    prepared_csv = project_root / config["paths"]["prepared_csv"]
-    prepared_df = pd.read_csv(prepared_csv, parse_dates=[config["data"]["datetime_column"]])
+    prepared_df = _load_report_prepared_dataframe(config, run_manifest)
 
     include_lakes_cfg = config["data"].get("include_lakes")
     if include_lakes_cfg:
@@ -591,7 +590,7 @@ def _collect_report_data(run_dir: Path) -> dict[str, Any]:
             "overlap_rows": int(len(seasonal_rollout_overlap_predictions)),
         }
 
-    raw_excel = (project_root / config["paths"]["raw_excel"]).resolve()
+    raw_excel = _resolve_report_path(config, config["paths"]["raw_excel"])
     target_lake_label = (
         str(evaluation_predictions["lake_name"].iloc[0]) if not evaluation_predictions.empty else XIAOXINGKAI_NAME
     )
@@ -615,6 +614,52 @@ def _collect_report_data(run_dir: Path) -> dict[str, Any]:
         "seasonal_rollout_overview": seasonal_rollout_overview,
         "target_lake_label": target_lake_label,
     }
+
+
+def _load_report_prepared_dataframe(config: dict[str, Any], run_manifest: dict[str, Any]) -> pd.DataFrame:
+    datetime_column = config["data"]["datetime_column"]
+    prepared_candidates: list[Path] = [_resolve_report_path(config, config["paths"]["prepared_csv"])]
+
+    data_processing_report_path = run_manifest.get("data_processing_report_path")
+    if data_processing_report_path:
+        report_path = Path(data_processing_report_path)
+        if report_path.exists():
+            data_processing_report = json.loads(report_path.read_text(encoding="utf-8"))
+            prepared_csv_path = data_processing_report.get("prepared_csv_path")
+            if prepared_csv_path:
+                prepared_candidates.append(_resolve_report_path(config, prepared_csv_path))
+
+    seen_paths: set[Path] = set()
+    for candidate in prepared_candidates:
+        resolved_candidate = candidate.resolve()
+        if resolved_candidate in seen_paths:
+            continue
+        seen_paths.add(resolved_candidate)
+        if resolved_candidate.exists():
+            prepared_df = pd.read_csv(resolved_candidate, parse_dates=[datetime_column])
+            return filter_include_lakes(prepared_df, config)
+
+    raw_excel = _resolve_report_path(config, config["paths"]["raw_excel"])
+    if not raw_excel.exists():
+        attempted = ", ".join(str(path) for path in seen_paths) or "<none>"
+        raise FileNotFoundError(
+            "Unable to load prepared dataframe for report generation. "
+            f"Tried prepared CSV path(s): {attempted}. Missing raw Excel: {raw_excel}"
+        )
+
+    raw_df = load_raw_excel(raw_excel, sheet_name=config["data"].get("excel_sheet_name"))
+    prepared_df, _ = standardize_dataframe(raw_df, config)
+    return prepared_df
+
+
+def _resolve_report_path(config: dict[str, Any], raw_path: str | Path) -> Path:
+    path = Path(raw_path)
+    if path.is_absolute():
+        return path.resolve()
+
+    runtime_cfg = config.get("runtime", {})
+    project_root = Path(runtime_cfg.get("project_root", "."))
+    return (project_root / path).resolve()
 
 
 def _resolve_report_target_lake(include_lakes: list[str]) -> str:
