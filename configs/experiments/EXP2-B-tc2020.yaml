@@ -1,0 +1,54 @@
+extends: "EXP1_transfer_autoreg.yaml"
+
+experiment:
+  name: "EXP2-B-tc2020"
+  description: "Experiment 2-B: transfer learning with Xiaoxingkai history plus TC2020 curve-based physics loss."
+
+paths:
+  prepared_csv: "data/interim/prepared_data_EXP2-B-tc2020.csv"
+  validation_report_json: "data/artifacts/EXP2-B-tc2020_validation_report.json"
+  feature_schema_json: "data/artifacts/EXP2-B-tc2020_feature_schema.json"
+  split_root: "data/splits_EXP2-B-tc2020"
+  window_root: "data/windows_EXP2-B-tc2020"
+  coeff_root: "data/coeffs_EXP2-B-tc2020"
+  artifact_root: "data/artifacts/EXP2-B-tc2020"
+
+split:
+  name: "EXP2-B-tc2020_reference"
+
+train:
+  physics_loss:
+    # 启用 TC2020 曲线型物理约束。
+    enabled: true
+    # 使用 AFDD/ATDD 驱动的曲线约束，而不是 legacy Stefan 残差。
+    mode: "tc2020_curve"
+    # 生长期曲线约束权重，约束 pred_ice 贴近 alpha * sqrt(AFDD)。
+    lambda_curve_grow: 0.00001
+    # 消融期曲线约束权重，只有 enable_decay=true 时才会实际生效。
+    lambda_curve_decay: 0.00001
+    # 非负约束权重，防止预测冰厚出现负值。
+    lambda_nn: 1.0
+    # 是否启用 -alpha_decay * ATDD 的消融项；开启后春季退冰会被显式约束。
+    enable_decay: true
+    # alpha 的初始值；训练时实际参数为 softplus(theta_alpha)，保证始终大于 0。
+    init_alpha: 1.6
+    # alpha_decay 的初始值；只有 enable_decay=true 时才参与训练。
+    init_alpha_decay: 1.0
+    # 用于累计 AFDD/ATDD 的气温列。
+    temperature_column: "Air_Temperature_celsius"
+    # 累计冻结度日列名，表示冰季内从 season_start_month 开始累计的 AFDD。
+    afdd_column: "afdd"
+    # 累计融化度日列名，表示冰季内从 season_start_month 开始累计的 ATDD。
+    atdd_column: "atdd"
+    # 生长期标记列名；只在 stable ice mask 内参与 grow 曲线约束。
+    growth_phase_column: "is_growth_phase"
+    # 消融期标记列名；只在 stable ice mask 内参与 decay 曲线约束。
+    decay_phase_column: "is_decay_phase"
+    # 稳定冰盖掩码列名；避免在薄冰、跳点或无冰阶段施加不稳定曲线约束。
+    stable_ice_mask_column: "stable_ice_mask"
+    # 冰季起始月份；AFDD/ATDD 会从每年该月份开始重新累计。
+    season_start_month: 11
+    # stable mask 的最小冰厚阈值，只有前后观测都不小于该值才视为稳定冰段。
+    stable_ice_min_m: 0.03
+    # 生长/消融分期的容差，避免把接近 0 的厚度变化误判成阶段切换。
+    phase_tolerance_m: 0.0012

@@ -1,2 +1,0 @@
-[console_scripts]
-lakeice-ncde = lakeice_ncde.cli:main

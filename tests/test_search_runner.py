@@ -299,9 +299,11 @@ def test_example_search_config_loads_expected_defaults() -> None:
     config_path = next((PROJECT_ROOT / "configs" / "search").glob("*.yaml"))
     config = load_search_config(PROJECT_ROOT, config_path)
 
-    assert config.name == "EXP2_test_r2_search"
-    assert config.n_trials == 64
+    assert config.name == "EXP2_test_r2_search_narrow"
+    assert config.base_batch_config.name == "Run-EXP2.yaml"
+    assert config.n_trials == 10
     assert config.execution.max_parallel_trials == 4
+    assert config.sampler.constant_liar is True
     assert config.objective.experiment_name == "EXP2_transfer_autoreg_stefan"
     assert config.objective.metric == "r2"
     assert config.storage.path.name == "study.journal"

@@ -51,7 +51,7 @@ split:
   seed: 42
 
 custom_split:
-  val_fraction: 0.3
+  val_fraction: 0.2
   min_val_rows_per_lake: 8
   min_train_rows_per_lake: 24
   max_train_windows_per_lake: 160
@@ -66,7 +66,7 @@ seasonal_rollout:
   autoregressive_history: true
   target_lake_name: "Xiaoxingkai"
   era5_csv: "data/raw/XXKH-St-UTC+8-ERA5-1980-202603-noNA.csv"
-  test_start_datetime: "2025-11-01 12:00:00"
+  test_start_datetime: "2025-10-01 12:00:00"
   end_datetime: "2026-03-31 12:00:00"
   daily_hour: 12
 
@@ -77,9 +77,9 @@ window:
   save_raw_windows: true
 
 model:
-  hidden_channels: 55
-  hidden_hidden_channels: 100
-  num_hidden_layers: 5
+  hidden_channels: 48
+  hidden_hidden_channels: 110
+  num_hidden_layers: 4
   dropout: 0.05
   method: "rk4"
   use_adjoint: false

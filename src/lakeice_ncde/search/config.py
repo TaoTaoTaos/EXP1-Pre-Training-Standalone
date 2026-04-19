@@ -22,16 +22,21 @@ SUPPORTED_PARAMETER_TYPES = {"int", "float", "categorical", "bool"}
 class SearchSamplerConfig:
     name: str
     seed: int
+    constant_liar: bool = False
 
     def build_sampler(self, worker_index: int = 0) -> optuna.samplers.BaseSampler:
         if self.name != "tpe":
             raise ValueError(f"Unsupported sampler '{self.name}'. Supported samplers: {sorted(SUPPORTED_SAMPLERS)}")
-        return optuna.samplers.TPESampler(seed=self.seed + worker_index)
+        return optuna.samplers.TPESampler(
+            seed=self.seed + worker_index,
+            constant_liar=self.constant_liar,
+        )
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "seed": self.seed,
+            "constant_liar": self.constant_liar,
         }
 
 
@@ -215,6 +220,7 @@ def load_search_config(project_root: Path, config_path: str | Path) -> SearchCon
     sampler = SearchSamplerConfig(
         name=sampler_name,
         seed=int(sampler_cfg.get("seed", 42)),
+        constant_liar=bool(sampler_cfg.get("constant_liar", False)),
     )
 
     storage_cfg = search_cfg.get("storage") or {}

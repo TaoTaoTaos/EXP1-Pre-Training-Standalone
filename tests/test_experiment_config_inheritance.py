@@ -43,6 +43,35 @@ def test_exp2_inherits_from_exp0_and_enables_physics() -> None:
     assert config["paths"]["prepared_csv"].endswith("prepared_data_EXP2_transfer_autoreg_stefan.csv")
 
 
+def test_exp2_b_tc2020_inherits_transfer_setup_and_switches_mode() -> None:
+    config = _load_experiment_config("EXP2-B-tc2020.yaml")
+    physics_cfg = config["train"]["physics_loss"]
+
+    assert config["experiment"]["name"] == "EXP2-B-tc2020"
+    assert config["custom_split"]["target_lake_test_start"] == "2026-01-01"
+    assert physics_cfg["enabled"] is True
+    assert physics_cfg["mode"] == "tc2020_curve"
+    for field_name in (
+        "lambda_curve_grow",
+        "lambda_curve_decay",
+        "lambda_nn",
+        "enable_decay",
+        "init_alpha",
+        "init_alpha_decay",
+        "temperature_column",
+        "afdd_column",
+        "atdd_column",
+        "growth_phase_column",
+        "decay_phase_column",
+        "stable_ice_mask_column",
+        "season_start_month",
+        "stable_ice_min_m",
+        "phase_tolerance_m",
+    ):
+        assert field_name in physics_cfg
+    assert config["paths"]["prepared_csv"].endswith("prepared_data_EXP2-B-tc2020.csv")
+
+
 def test_old_aliases_resolve_to_new_experiment_names() -> None:
     exp0 = _load_experiment_config("Olds/EXP0_transfer_autoreg.yaml")
     exp1 = _load_experiment_config("Olds/EXP1_history_autoreg.yaml")

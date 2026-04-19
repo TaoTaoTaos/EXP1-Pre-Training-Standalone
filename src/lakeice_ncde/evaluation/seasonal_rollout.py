@@ -13,7 +13,7 @@ from lakeice_ncde.data.coeffs import compute_coefficients_for_windows, save_coef
 from lakeice_ncde.data.scaling import StandardScalerBundle, apply_feature_scaler, inverse_transform_target
 from lakeice_ncde.data.windowing import _build_single_window
 from lakeice_ncde.evaluation.metrics import compute_regression_metrics
-from lakeice_ncde.utils.io import save_dataframe, save_json
+from lakeice_ncde.utils.io import save_dataframe, save_json, save_torch
 
 
 @dataclass(frozen=True)
@@ -59,7 +59,7 @@ def run_seasonal_rollout(
             prepared_df=prepared_df,
             scaler=scaler,
         )
-        torch.save(bundle, window_path)
+        save_torch(bundle, window_path)
         coeff_path, _, _ = save_coeff_bundle(
             coeff_bundle,
             coeff_root=coeff_root,
@@ -69,7 +69,7 @@ def run_seasonal_rollout(
     else:
         scaled_rollout_df = apply_feature_scaler(rollout_df, scaler)
         bundle = build_inference_window_bundle(scaled_rollout_df, config, split_name="seasonal_rollout")
-        torch.save(bundle, window_path)
+        save_torch(bundle, window_path)
         coeff_bundle = compute_coefficients_for_windows(window_path, interpolation=config["coeffs"]["interpolation"], logger=logger)
         coeff_path, _, _ = save_coeff_bundle(coeff_bundle, coeff_root=coeff_root, split_name=split_name, split="seasonal_rollout")
         predictions_df = predict_coeff_bundle(model, device, coeff_bundle, target_transform=config["features"]["target_transform"])

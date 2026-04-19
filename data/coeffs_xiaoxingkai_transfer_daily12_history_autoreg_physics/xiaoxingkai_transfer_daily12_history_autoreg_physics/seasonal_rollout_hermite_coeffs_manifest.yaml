@@ -1,6 +1,0 @@
-split_name: xiaoxingkai_transfer_daily12_history_autoreg_physics
-split: seasonal_rollout
-interpolation: hermite
-bundle_path: S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\coeffs_xiaoxingkai_transfer_daily12_history_autoreg_physics\xiaoxingkai_transfer_daily12_history_autoreg_physics\seasonal_rollout_hermite_coeffs.pt
-metadata_path: S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\coeffs_xiaoxingkai_transfer_daily12_history_autoreg_physics\xiaoxingkai_transfer_daily12_history_autoreg_physics\seasonal_rollout_hermite_coeffs_metadata.csv
-count: 144

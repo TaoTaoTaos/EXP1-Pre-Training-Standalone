@@ -308,11 +308,11 @@ def _run_batch_worker(
     set_values: list[str],
 ) -> dict[str, Any]:
     from lakeice_ncde.pipeline import resolve_runtime
-    from lakeice_ncde.workflows.xiaoxingkai_transfer import run as run_xiaoxingkai_transfer
+    from lakeice_ncde.workflows.dispatch import run_configured_workflow
 
     config, paths, logger = resolve_runtime(Path(project_root), config_path, override_paths, set_values)
     config.setdefault("experiment", {})["append_registry"] = False
-    fold_summary = run_xiaoxingkai_transfer(config, paths, logger)
+    fold_summary = run_configured_workflow(config, paths, logger)
     return {
         "experiment_name": config["experiment"]["name"],
         "run_dir": str(fold_summary["run_dir"]),

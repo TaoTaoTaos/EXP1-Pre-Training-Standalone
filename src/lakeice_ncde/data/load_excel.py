@@ -64,6 +64,7 @@ def standardize_dataframe(df: pd.DataFrame, config: dict) -> tuple[pd.DataFrame,
             df[column] = pd.to_numeric(df[column], errors="coerce")
 
     df = _add_history_target_features(df, config)
+    df = _add_tc2020_curve_features(df, config)
 
     df = df.sort_values([data_cfg["lake_column"], dt_col]).reset_index(drop=True)
 
@@ -97,6 +98,154 @@ def _add_history_target_features(df: pd.DataFrame, config: dict) -> pd.DataFrame
     output["ice_prev_gap_days"] = (
         (output[dt_col] - previous_time).dt.total_seconds() / 86400.0
     ).fillna(0.0)
+    return output
+
+
+def _require_physics_config_value(physics_cfg: dict, field_name: str) -> object:
+    if field_name not in physics_cfg:
+        raise ValueError(
+            f"Physics loss mode '{physics_cfg.get('mode', 'legacy_stefan')}' requires config field '{field_name}'."
+        )
+    return physics_cfg[field_name]
+
+
+def resolve_tc2020_curve_preprocessing_config(config: dict) -> dict[str, object]:
+    physics_cfg = config["train"].get("physics_loss", {})
+    mode = str(physics_cfg.get("mode", "legacy_stefan"))
+    if mode != "tc2020_curve":
+        raise ValueError(
+            "TC2020 curve preprocessing config can only be resolved when "
+            "train.physics_loss.mode == 'tc2020_curve'."
+        )
+
+    tc2020_cfg = {
+        "temperature_column": str(
+            _require_physics_config_value(physics_cfg, "temperature_column")
+        ),
+        "afdd_column": str(_require_physics_config_value(physics_cfg, "afdd_column")),
+        "atdd_column": str(_require_physics_config_value(physics_cfg, "atdd_column")),
+        "growth_phase_column": str(
+            _require_physics_config_value(physics_cfg, "growth_phase_column")
+        ),
+        "decay_phase_column": str(
+            _require_physics_config_value(physics_cfg, "decay_phase_column")
+        ),
+        "stable_ice_mask_column": str(
+            _require_physics_config_value(physics_cfg, "stable_ice_mask_column")
+        ),
+        "season_start_month": int(
+            _require_physics_config_value(physics_cfg, "season_start_month")
+        ),
+        "stable_ice_min_m": float(
+            _require_physics_config_value(physics_cfg, "stable_ice_min_m")
+        ),
+        "phase_tolerance_m": float(
+            _require_physics_config_value(physics_cfg, "phase_tolerance_m")
+        ),
+    }
+    return tc2020_cfg
+
+
+def resolve_required_physics_columns(config: dict) -> dict[str, str]:
+    physics_cfg = config["train"].get("physics_loss", {})
+    if not physics_cfg.get("enabled", False):
+        return {}
+
+    mode = str(physics_cfg.get("mode", "legacy_stefan"))
+    if mode == "legacy_stefan":
+        return {
+            "ice_prev_m": str(physics_cfg.get("prev_ice_column", "ice_prev_m")),
+            "ice_prev_gap_days": str(physics_cfg.get("gap_days_column", "ice_prev_gap_days")),
+            "Air_Temperature_celsius": str(
+                physics_cfg.get("temperature_column", "Air_Temperature_celsius")
+            ),
+            "ice_prev_available": str(
+                physics_cfg.get("prev_available_column", "ice_prev_available")
+            ),
+        }
+    if mode == "tc2020_curve":
+        tc2020_cfg = resolve_tc2020_curve_preprocessing_config(config)
+        return {
+            "afdd": str(tc2020_cfg["afdd_column"]),
+            "atdd": str(tc2020_cfg["atdd_column"]),
+            "is_growth_phase": str(tc2020_cfg["growth_phase_column"]),
+            "is_decay_phase": str(tc2020_cfg["decay_phase_column"]),
+            "stable_ice_mask": str(tc2020_cfg["stable_ice_mask_column"]),
+        }
+    raise ValueError(f"Unsupported physics loss mode: {mode}")
+
+
+def _add_tc2020_curve_features(df: pd.DataFrame, config: dict) -> pd.DataFrame:
+    physics_cfg = config["train"].get("physics_loss", {})
+    if str(physics_cfg.get("mode", "legacy_stefan")) != "tc2020_curve":
+        return df
+
+    data_cfg = config["data"]
+    tc2020_cfg = resolve_tc2020_curve_preprocessing_config(config)
+    lake_col = data_cfg["lake_column"]
+    dt_col = data_cfg["datetime_column"]
+    target_col = data_cfg["target_column"]
+    temperature_col = str(tc2020_cfg["temperature_column"])
+    required_columns = {lake_col, dt_col, target_col, temperature_col}
+    missing_columns = sorted(column for column in required_columns if column not in df.columns)
+    if missing_columns:
+        raise ValueError(
+            "TC2020 curve preprocessing requires the following dataframe columns, but they are missing: "
+            f"{missing_columns}"
+        )
+
+    afdd_column = str(tc2020_cfg["afdd_column"])
+    atdd_column = str(tc2020_cfg["atdd_column"])
+    growth_phase_column = str(tc2020_cfg["growth_phase_column"])
+    decay_phase_column = str(tc2020_cfg["decay_phase_column"])
+    stable_ice_mask_column = str(tc2020_cfg["stable_ice_mask_column"])
+    season_start_month = int(tc2020_cfg["season_start_month"])
+    stable_ice_min_m = float(tc2020_cfg["stable_ice_min_m"])
+    phase_tolerance_m = float(tc2020_cfg["phase_tolerance_m"])
+
+    output = df.sort_values([lake_col, dt_col]).reset_index(drop=True).copy()
+    output[target_col] = pd.to_numeric(output[target_col], errors="coerce").fillna(0.0)
+    output[temperature_col] = (
+        pd.to_numeric(output[temperature_col], errors="coerce").fillna(0.0)
+    )
+
+    previous_time = output.groupby(lake_col)[dt_col].shift(1)
+    previous_target = output.groupby(lake_col)[target_col].shift(1)
+    gap_days = (
+        (output[dt_col] - previous_time).dt.total_seconds() / 86400.0
+    ).fillna(0.0)
+    positive_gap_days = gap_days.clip(lower=0.0)
+
+    season_anchor_year = output[dt_col].dt.year - (
+        output[dt_col].dt.month < season_start_month
+    ).astype(int)
+    season_id = season_anchor_year.astype(str)
+
+    # AFDD/ATDD 以湖泊-冰季为单位累计，避免跨年后把不同冰季的积温错误地串在一起。
+    delta_afdd = np.maximum(-output[temperature_col].to_numpy(dtype=float), 0.0) * positive_gap_days.to_numpy(dtype=float)
+    delta_atdd = np.maximum(output[temperature_col].to_numpy(dtype=float), 0.0) * positive_gap_days.to_numpy(dtype=float)
+    season_keys = pd.MultiIndex.from_arrays([output[lake_col].astype(str), season_id])
+    output[afdd_column] = pd.Series(delta_afdd, index=output.index).groupby(season_keys).cumsum().astype(float)
+    output[atdd_column] = pd.Series(delta_atdd, index=output.index).groupby(season_keys).cumsum().astype(float)
+
+    prev_available = previous_target.notna()
+    prev_ice = previous_target.fillna(0.0).astype(float)
+    current_ice = output[target_col].astype(float)
+    delta_ice = current_ice - prev_ice
+
+    # growth/decay phase 用观测冰厚变化方向判定；stable mask 则要求前后两次观测都已有较稳定冰层，
+    # 这样可以尽量避开初冻和融尽阶段的高噪声样本，让曲线约束只作用在更可解释的区间。
+    output[growth_phase_column] = (
+        prev_available & (delta_ice >= -phase_tolerance_m)
+    ).astype(float)
+    output[decay_phase_column] = (
+        prev_available & (delta_ice < -phase_tolerance_m)
+    ).astype(float)
+    output[stable_ice_mask_column] = (
+        prev_available
+        & (prev_ice >= stable_ice_min_m)
+        & (current_ice >= stable_ice_min_m)
+    ).astype(float)
     return output
 
 

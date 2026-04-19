@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import random
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -12,6 +14,10 @@ import torch
 
 from lakeice_ncde.data.coeffs import compute_coefficients_for_windows, save_coeff_bundle
 from lakeice_ncde.data.datasets import create_dataloader
+from lakeice_ncde.data.load_excel import (
+    resolve_required_physics_columns,
+    resolve_tc2020_curve_preprocessing_config,
+)
 from lakeice_ncde.data.scaling import apply_feature_scaler, fit_feature_scaler, transform_target
 from lakeice_ncde.data.windowing import _build_single_window
 from lakeice_ncde.evaluation.per_lake_summary import compute_per_lake_metrics
@@ -21,7 +27,8 @@ from lakeice_ncde.experiment.tracker import create_run_context
 from lakeice_ncde.models.neural_cde import build_model
 from lakeice_ncde.pipeline import load_or_prepare_dataframe, plot_from_run, validate_and_save
 from lakeice_ncde.training.engine import Trainer
-from lakeice_ncde.utils.io import load_dataframe, save_dataframe, save_json, save_yaml
+from lakeice_ncde.utils.io import load_dataframe, save_dataframe, save_json, save_torch, save_yaml
+from lakeice_ncde.utils.locking import PathLock
 from lakeice_ncde.utils.logging import setup_logging
 from lakeice_ncde.utils.seed import set_seed
 
@@ -122,6 +129,99 @@ def _save_fold_manifest(fold_df: pd.DataFrame, fold: FoldSpec, split_root: Path,
     return manifest_path
 
 
+def _build_window_cache_key(config: dict) -> str:
+    physics_cfg = config["train"].get("physics_loss", {})
+    physics_mode = str(physics_cfg.get("mode", "legacy_stefan"))
+    physics_cache_controls: dict[str, Any] = {}
+    if physics_mode == "tc2020_curve":
+        physics_cache_controls = resolve_tc2020_curve_preprocessing_config(config)
+    payload = {
+        "experiment_name": config["experiment"]["name"],
+        "raw_excel": config["paths"]["raw_excel"],
+        "data": config["data"],
+        "features": config["features"],
+        "window": config["window"],
+        "custom_split": config["custom_split"],
+        "physics_mode": physics_mode,
+        "physics_fields": resolve_required_physics_columns(config),
+        "physics_cache_controls": physics_cache_controls,
+    }
+    serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True)
+    return hashlib.sha1(serialized.encode("utf-8")).hexdigest()[:12]
+
+
+def _shared_window_split_dir(window_root: Path, split_name: str, config: dict) -> Path:
+    cache_key = _build_window_cache_key(config)
+    return window_root / "_shared" / cache_key / split_name
+
+
+def _shared_window_cache_ready(split_dir: Path) -> bool:
+    scaler_path = split_dir / "feature_scaler.yaml"
+    return scaler_path.exists() and all(
+        (split_dir / f"{current_split}_windows.pt").exists()
+        for current_split in ("train", "val")
+    )
+
+
+def _ensure_shared_window_bundles(
+    fold_df: pd.DataFrame,
+    config: dict,
+    split_name: str,
+    window_root: Path,
+    logger,
+) -> tuple[dict[str, Path], Path]:
+    split_dir = _shared_window_split_dir(window_root, split_name, config)
+    scaler_path = split_dir / "feature_scaler.yaml"
+    bundle_paths = {
+        current_split: split_dir / f"{current_split}_windows.pt"
+        for current_split in ("train", "val")
+    }
+    if _shared_window_cache_ready(split_dir):
+        logger.info("Reusing shared window cache for split '%s': %s", split_name, split_dir)
+        return bundle_paths, scaler_path
+
+    lock_path = split_dir / ".build.lock"
+    with PathLock(lock_path):
+        if _shared_window_cache_ready(split_dir):
+            logger.info("Reusing shared window cache for split '%s': %s", split_name, split_dir)
+            return bundle_paths, scaler_path
+        logger.info("Building shared window cache for split '%s': %s", split_name, split_dir)
+        bundle_paths = _build_row_split_window_bundles(
+            fold_df=fold_df,
+            config=config,
+            split_name=split_name,
+            window_root=split_dir.parent,
+            logger=logger,
+        )
+    return bundle_paths, scaler_path
+
+
+def _materialize_runtime_window_bundles(
+    shared_bundle_paths: dict[str, Path],
+    shared_scaler_path: Path,
+    run_dir: Path,
+    split_name: str,
+) -> tuple[dict[str, Path], Path]:
+    runtime_split_dir = run_dir / "artifacts" / "runtime_cache" / "windows" / split_name
+    runtime_split_dir.mkdir(parents=True, exist_ok=True)
+
+    runtime_scaler_path = runtime_split_dir / "feature_scaler.yaml"
+    shutil.copy2(shared_scaler_path, runtime_scaler_path)
+
+    runtime_bundle_paths: dict[str, Path] = {}
+    for current_split, shared_bundle_path in shared_bundle_paths.items():
+        runtime_bundle_path = runtime_split_dir / shared_bundle_path.name
+        shutil.copy2(shared_bundle_path, runtime_bundle_path)
+        metadata_path = shared_bundle_path.parent / f"{current_split}_windows_metadata.csv"
+        manifest_path = shared_bundle_path.parent / f"{current_split}_windows_manifest.yaml"
+        if metadata_path.exists():
+            shutil.copy2(metadata_path, runtime_split_dir / metadata_path.name)
+        if manifest_path.exists():
+            shutil.copy2(manifest_path, runtime_split_dir / manifest_path.name)
+        runtime_bundle_paths[current_split] = runtime_bundle_path
+    return runtime_bundle_paths, runtime_scaler_path
+
+
 def _build_row_split_window_bundles(
     fold_df: pd.DataFrame,
     config: dict,
@@ -137,14 +237,11 @@ def _build_row_split_window_bundles(
     target_column = data_cfg["target_column"]
     feature_columns = feature_cfg["feature_columns"]
     physics_cfg = config["train"].get("physics_loss", {})
-    physics_field_columns = {
-        "ice_prev_m": str(physics_cfg.get("prev_ice_column", "ice_prev_m")),
-        "ice_prev_gap_days": str(physics_cfg.get("gap_days_column", "ice_prev_gap_days")),
-        "Air_Temperature_celsius": str(physics_cfg.get("temperature_column", "Air_Temperature_celsius")),
-        "ice_prev_available": str(physics_cfg.get("prev_available_column", "ice_prev_available")),
-    }
+    physics_field_columns = resolve_required_physics_columns(config)
     if physics_cfg.get("enabled", False):
-        missing_columns = [column for column in physics_field_columns.values() if column not in fold_df.columns]
+        missing_columns = [
+            column for column in physics_field_columns.values() if column not in fold_df.columns
+        ]
         if missing_columns:
             raise ValueError(
                 "Physics loss requires the following prepared-data columns, but they are missing: "
@@ -259,7 +356,7 @@ def _build_row_split_window_bundles(
         bundle_path = split_dir / f"{current_split}_windows.pt"
         metadata_path = split_dir / f"{current_split}_windows_metadata.csv"
         manifest_path = split_dir / f"{current_split}_windows_manifest.yaml"
-        torch.save(bundle, bundle_path)
+        save_torch(bundle, bundle_path)
         save_dataframe(pd.DataFrame(metadata_rows), metadata_path)
         save_yaml(
             {
@@ -306,7 +403,7 @@ def _subsample_bundle_by_lake(bundle_path: Path, max_windows_per_lake: int, seed
             field_name: values[keep_indices]
             for field_name, values in physics_context.items()
         }
-    torch.save(bundle, bundle_path)
+    save_torch(bundle, bundle_path)
 
     metadata_df = pd.DataFrame(bundle["metadata"])
     metadata_path = bundle_path.parent / f"{bundle['split']}_windows_metadata.csv"
@@ -520,7 +617,12 @@ def run(config: dict, paths, base_logger) -> dict[str, Any]:
         config["features"]["target_transform"],
     )
     fold_df = _build_fold_dataframe(prepared_df, fold, config)
-    manifest_path = _save_fold_manifest(fold_df, fold, paths.split_root, config["data"]["lake_column"])
+    manifest_path = _save_fold_manifest(
+        fold_df,
+        fold,
+        run_context.artifacts_dir / "runtime_cache" / "splits",
+        config["data"]["lake_column"],
+    )
 
     for split_name in ("train", "val", "test"):
         split_lakes = sorted(
@@ -528,7 +630,19 @@ def run(config: dict, paths, base_logger) -> dict[str, Any]:
         )
         logger.info("Fold '%s' -> %s lakes (%d): %s", fold.name, split_name, len(split_lakes), split_lakes)
 
-    bundle_paths = _build_row_split_window_bundles(fold_df, config, fold.name, paths.window_root, logger)
+    shared_bundle_paths, scaler_path = _ensure_shared_window_bundles(
+        fold_df=fold_df,
+        config=config,
+        split_name=fold.name,
+        window_root=paths.window_root,
+        logger=logger,
+    )
+    bundle_paths, scaler_path = _materialize_runtime_window_bundles(
+        shared_bundle_paths=shared_bundle_paths,
+        shared_scaler_path=scaler_path,
+        run_dir=run_context.run_dir,
+        split_name=fold.name,
+    )
     custom_cfg = config["custom_split"]
     _subsample_bundle_by_lake(bundle_paths["train"], int(custom_cfg["max_train_windows_per_lake"]), int(config["train"]["seed"]))
     _subsample_bundle_by_lake(bundle_paths["val"], int(custom_cfg["max_val_windows_per_lake"]), int(config["train"]["seed"]) + 1)
@@ -539,11 +653,12 @@ def run(config: dict, paths, base_logger) -> dict[str, Any]:
     )
 
     coeff_paths: dict[str, Path] = {}
+    runtime_coeff_root = run_context.artifacts_dir / "runtime_cache" / "coeffs"
     for current_split, bundle_path in bundle_paths.items():
         coeff_bundle = compute_coefficients_for_windows(bundle_path, interpolation=config["coeffs"]["interpolation"], logger=logger)
-        coeff_path, _, _ = save_coeff_bundle(coeff_bundle, paths.coeff_root, split_name=fold.name, split=current_split)
+        coeff_path, _, _ = save_coeff_bundle(coeff_bundle, runtime_coeff_root, split_name=fold.name, split=current_split)
         coeff_paths[current_split] = coeff_path
-    logger.info("Saved %d coefficient bundle(s) under %s", len(coeff_paths), paths.coeff_root)
+    logger.info("Saved %d coefficient bundle(s) under %s", len(coeff_paths), runtime_coeff_root)
 
     train_dataset, train_loader = create_dataloader(
         coeff_paths["train"],
@@ -584,8 +699,8 @@ def run(config: dict, paths, base_logger) -> dict[str, Any]:
         device=trainer.device,
         config=config,
         prepared_df=prepared_df,
-        scaler_path=bundle_paths["train"].parent / "feature_scaler.yaml",
-        coeff_root=paths.coeff_root,
+        scaler_path=scaler_path,
+        coeff_root=runtime_coeff_root,
         split_name=fold.name,
         run_dir=run_context.run_dir,
         logger=logger,

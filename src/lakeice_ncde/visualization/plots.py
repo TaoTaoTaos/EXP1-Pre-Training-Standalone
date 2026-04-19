@@ -78,6 +78,47 @@ def plot_metric_curves(history: pd.DataFrame, path: Path) -> None:
     _finalize_figure(fig, path)
 
 
+def create_physics_loss_curves_figure(history: pd.DataFrame) -> plt.Figure:
+    fig, axes = plt.subplots(1, 2, figsize=(14, 4.5), sharex=True)
+    train_columns = [
+        ("train_loss_sup", "Supervised"),
+        ("train_loss_nonneg", "Nonnegative"),
+        ("train_loss_phase", "Phase"),
+        ("train_loss_stefan", "Stefan"),
+        ("train_loss_stefan_band", "Stefan Band"),
+        ("train_loss_melt", "Melt"),
+        ("train_loss_smooth", "Smooth"),
+        ("train_loss_transition", "Transition"),
+        ("train_physics_total", "Physics Total"),
+    ]
+    for column, label in train_columns:
+        if column not in history.columns:
+            continue
+        axes[0].plot(history["epoch"], history[column], linewidth=2, label=label)
+    axes[0].set_title("Train Physics Sub-Losses")
+    axes[0].set_xlabel("Epoch")
+    axes[0].set_ylabel("Loss")
+    axes[0].grid(True, alpha=0.3)
+    if axes[0].lines:
+        axes[0].legend()
+
+    if "train_kappa" in history.columns:
+        axes[1].plot(history["epoch"], history["train_kappa"], linewidth=2, color="#d62728", label="Kappa")
+    axes[1].set_title("Physics State")
+    axes[1].set_xlabel("Epoch")
+    axes[1].set_ylabel("Value")
+    axes[1].grid(True, alpha=0.3)
+    if axes[1].lines:
+        axes[1].legend()
+    fig.tight_layout()
+    return fig
+
+
+def plot_physics_loss_curves(history: pd.DataFrame, path: Path) -> None:
+    fig = create_physics_loss_curves_figure(history)
+    _finalize_figure(fig, path)
+
+
 def create_pred_vs_obs_figure(predictions: pd.DataFrame) -> plt.Figure:
     fig, ax = plt.subplots(figsize=(6, 6))
     ax.scatter(predictions["y_true"], predictions["y_pred"], alpha=0.6, s=18)
@@ -104,6 +145,37 @@ def plot_residual_histogram(predictions: pd.DataFrame, path: Path) -> None:
     ax.set_xlabel("Prediction - Observation")
     ax.set_ylabel("Count")
     ax.grid(True, alpha=0.3)
+    _finalize_figure(fig, path)
+
+
+def create_residual_timeseries_figure(predictions: pd.DataFrame) -> plt.Figure:
+    plot_df = predictions.copy()
+    plot_df["sample_datetime"] = pd.to_datetime(plot_df["sample_datetime"])
+    plot_df = plot_df.sort_values("sample_datetime")
+    plot_df["residual"] = plot_df["y_pred"] - plot_df["y_true"]
+
+    fig, ax = plt.subplots(figsize=(12, 4.5))
+    ax.plot(plot_df["sample_datetime"], plot_df["residual"], linewidth=1.8, color="#d62728")
+    ax.scatter(
+        plot_df["sample_datetime"],
+        plot_df["residual"],
+        s=22,
+        color="#1f77b4",
+        edgecolors="white",
+        linewidths=0.3,
+    )
+    ax.axhline(0.0, color="#111111", linestyle="--", linewidth=1.1)
+    ax.set_title("Residual Time Series")
+    ax.set_xlabel("Datetime")
+    ax.set_ylabel("Prediction - Observation (m)")
+    ax.grid(True, alpha=0.3)
+    fig.autofmt_xdate()
+    fig.tight_layout()
+    return fig
+
+
+def plot_residual_timeseries(predictions: pd.DataFrame, path: Path) -> None:
+    fig = create_residual_timeseries_figure(predictions)
     _finalize_figure(fig, path)
 
 
@@ -400,6 +472,62 @@ def create_comparison_validation_metric_curves_figure(histories: dict[str, pd.Da
     fig.suptitle("Validation Metric Curve Comparison", fontsize=15, y=1.02)
     fig.tight_layout()
     return fig
+
+
+def plot_comparison_timeseries(
+    experiment_frames: dict[str, pd.DataFrame],
+    title: str,
+    path: Path,
+    start_datetime: str | pd.Timestamp | None = None,
+    end_datetime: str | pd.Timestamp | None = None,
+) -> None:
+    fig = create_comparison_timeseries_figure(
+        experiment_frames=experiment_frames,
+        title=title,
+        start_datetime=start_datetime,
+        end_datetime=end_datetime,
+    )
+    _finalize_figure(fig, path)
+
+
+def create_rmse_r2_scatter_figure(
+    summary_df: pd.DataFrame,
+    label_column: str = "label",
+) -> plt.Figure:
+    plot_df = summary_df.loc[
+        summary_df["status"].eq("completed")
+        & summary_df["test_rmse"].notna()
+        & summary_df["test_r2"].notna()
+    ].copy()
+    fig, ax = plt.subplots(figsize=(8.5, 6))
+    if plot_df.empty:
+        ax.set_title("RMSE vs R2 Overview")
+        ax.set_xlabel("Test RMSE")
+        ax.set_ylabel("Test R2")
+        ax.grid(True, alpha=0.3)
+        return fig
+
+    colors = np.where(plot_df["rmse_risk"].fillna(False), "#d62728", "#1f77b4")
+    ax.scatter(plot_df["test_rmse"], plot_df["test_r2"], c=colors, s=72, alpha=0.9)
+    for _, row in plot_df.iterrows():
+        ax.annotate(
+            str(row.get(label_column, row.get("experiment_name", ""))),
+            (row["test_rmse"], row["test_r2"]),
+            textcoords="offset points",
+            xytext=(6, 5),
+            fontsize=9,
+        )
+    ax.set_title("RMSE vs R2 Overview")
+    ax.set_xlabel("Test RMSE")
+    ax.set_ylabel("Test R2")
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    return fig
+
+
+def plot_rmse_r2_scatter(summary_df: pd.DataFrame, path: Path, label_column: str = "label") -> None:
+    fig = create_rmse_r2_scatter_figure(summary_df=summary_df, label_column=label_column)
+    _finalize_figure(fig, path)
 
 
 def _slugify(value: str) -> str:

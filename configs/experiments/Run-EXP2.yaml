@@ -1,0 +1,11 @@
+experiment:
+  name: "Run-EXP2"
+  description: "Batch runner for EXP2 only during focused parameter search."
+
+paths:
+  output_root: "outputs/runs"
+
+batch:
+  max_workers: 1
+  experiments:
+    - config: "EXP2_transfer_autoreg_stefan.yaml"

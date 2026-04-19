@@ -26,13 +26,13 @@ def main() -> None:
     if args.command == "run":
         from lakeice_ncde.batch import is_batch_config, run_batch_experiments
         from lakeice_ncde.pipeline import resolve_runtime
-        from lakeice_ncde.workflows.xiaoxingkai_transfer import run as run_xiaoxingkai_transfer
+        from lakeice_ncde.workflows.dispatch import run_configured_workflow
 
         config, paths, logger = resolve_runtime(project_root, args.config, args.override, args.set_values)
         if is_batch_config(config):
             run_batch_experiments(config, paths, project_root, logger)
         else:
-            run_xiaoxingkai_transfer(config, paths, logger)
+            run_configured_workflow(config, paths, logger)
         return
 
     if args.command == "search":

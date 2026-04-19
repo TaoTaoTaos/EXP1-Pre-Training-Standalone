@@ -87,7 +87,7 @@ The single CLI command runs the full pipeline:
 
 ```powershell
 conda activate SCI
-cd S:\STU-Papers\My_Papers\Neural CDE-based IceTransfer
+cd S:\STU-Papers\My_Papers\Neural-CDE-based-IceTransfer
 python -m pip install -r requirements.txt
 python -m pip install -e .
 ```

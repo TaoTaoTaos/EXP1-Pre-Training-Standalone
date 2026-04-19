@@ -1,9 +1,8 @@
 search:
-  name: "EXP2_test_r2_search_narrow"
+  name: "EXP2_test_r2_search_refined128"
   base_batch_config: "configs/experiments/Run-EXP2.yaml"
-  output_root: "outputs/search_runs/EXP2_test_r2_search_narrow"
-  n_trials: 10
-
+  output_root: "outputs/search_runs/EXP2_test_r2_search_refined128"
+  n_trials: 128
 
   sampler:
     name: "tpe"
@@ -30,8 +29,8 @@ search:
       enabled: true
       scope: ["all"]
       type: "float"
-      low: 1.0e-4
-      high: 4.0e-4
+      low: 2.5e-4
+      high: 8.0e-4
       log: true
 
     - name: "weight_decay_all"
@@ -39,8 +38,8 @@ search:
       enabled: true
       scope: ["all"]
       type: "float"
-      low: 1.0e-4
-      high: 2.0e-3
+      low: 8.0e-5
+      high: 6.0e-4
       log: true
 
     - name: "window_days_all"
@@ -57,8 +56,8 @@ search:
       enabled: true
       scope: ["all"]
       type: "int"
-      low: 48
-      high: 72
+      low: 72
+      high: 96
       step: 8
 
     - name: "hidden_hidden_channels_all"
@@ -111,8 +110,8 @@ search:
       enabled: true
       scope: ["EXP2_transfer_autoreg_stefan"]
       type: "float"
-      low: 1.0e-2
-      high: 4.0e-2
+      low: 1.4e-2
+      high: 1.95e-2
       log: false
 
     - name: "init_kappa_exp2"
@@ -120,8 +119,8 @@ search:
       enabled: true
       scope: ["EXP2_transfer_autoreg_stefan"]
       type: "float"
-      low: 7.0e-3
-      high: 1.2e-2
+      low: 9.0e-3
+      high: 1.12e-2
       log: false
 
     - name: "grow_temp_threshold_celsius_exp2"

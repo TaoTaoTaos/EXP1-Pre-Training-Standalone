@@ -17,12 +17,20 @@ class PhysicsLossBreakdown:
 
     # Stefan 风格增长约束项，刻画预测冰厚是否符合平方厚度增长关系。
     stefan: torch.Tensor
+    # TC2020 曲线在生长期上的约束项。
+    curve_grow: torch.Tensor
+    # TC2020 曲线在消融期上的约束项。
+    curve_decay: torch.Tensor
     # 非负约束项，防止模型输出负冰厚。
     nonneg: torch.Tensor
     # 物理损失总和，通常会按配置中的权重线性组合。
     total: torch.Tensor
     # 当前使用的有效 kappa（经过 softplus 后保证为正）。
     kappa: torch.Tensor
+    # 当前使用的有效 alpha（经过 softplus 后保证为正）。
+    alpha: torch.Tensor
+    # 当前使用的有效 alpha_decay（经过 softplus 后保证为正）。
+    alpha_decay: torch.Tensor
 
 
 def build_loss(config: dict) -> nn.Module:
@@ -58,33 +66,97 @@ def compute_physics_loss(
     config: dict,
     target_transform: str,
     theta_kappa: torch.Tensor | None,
+    theta_alpha: torch.Tensor | None = None,
+    theta_alpha_decay: torch.Tensor | None = None,
 ) -> PhysicsLossBreakdown:
-    """Stefan 物理损失。
+    """物理损失。
 
     参数说明：
     - predictions_transformed: 模型输出的目标值，仍处在训练时使用的 target transform 空间中。
     - physics_context: 与当前 batch 对齐的物理辅助字段，例如上一时刻冰厚、间隔天数、气温等。
     - config: 全局配置，用于读取物理损失开关、阈值和权重。
     - target_transform: 目标变量使用的变换方式，例如 none 或 log1p。
-    - theta_kappa: 可训练的无约束参数；通过 softplus 映射为正的 kappa。
+    - theta_kappa: legacy_stefan 模式下的可训练无约束参数；通过 softplus 映射为正的 kappa。
+    - theta_alpha: tc2020_curve 模式下的可训练无约束参数；通过 softplus 映射为正的 alpha。
+    - theta_alpha_decay: tc2020_curve 模式下的可训练无约束参数；通过 softplus 映射为正的 alpha_decay。
 
     设计思路：
     1. 先把模型输出从变换空间还原回真实冰厚空间。
-    2. 根据上一时刻冰厚、温度和时间间隔，筛出“应该发生结冰增长”的样本。
-    3. 在这些样本上施加 Stefan 型平方厚度增长约束。
+    2. 根据不同 mode，选择 legacy Stefan 约束或 tc2020 曲线约束。
+    3. 仅在具有明确物理解释的样本子集上施加对应约束。
     4. 再额外加入非负惩罚，避免输出出现物理上无意义的负冰厚。
     """
     physics_cfg = config["train"].get("physics_loss", {})
     zero = predictions_transformed.new_zeros(())
     if not physics_cfg.get("enabled", False):
         # 没开启物理损失时，返回全 0，占位但不影响主损失流程。
-        return PhysicsLossBreakdown(stefan=zero, nonneg=zero, total=zero, kappa=zero)
+        return PhysicsLossBreakdown(
+            stefan=zero,
+            curve_grow=zero,
+            curve_decay=zero,
+            nonneg=zero,
+            total=zero,
+            kappa=zero,
+            alpha=zero,
+            alpha_decay=zero,
+        )
     if physics_context is None:
         raise ValueError(
             "Physics loss is enabled but physics_context is missing from the batch."
         )
+    mode = str(physics_cfg.get("mode", "legacy_stefan"))
+    if mode == "legacy_stefan":
+        return _compute_legacy_stefan_loss(
+            predictions_transformed=predictions_transformed,
+            physics_context=physics_context,
+            physics_cfg=physics_cfg,
+            target_transform=target_transform,
+            theta_kappa=theta_kappa,
+        )
+    if mode == "tc2020_curve":
+        return _compute_tc2020_curve_loss(
+            predictions_transformed=predictions_transformed,
+            physics_context=physics_context,
+            physics_cfg=physics_cfg,
+            target_transform=target_transform,
+            theta_alpha=theta_alpha,
+            theta_alpha_decay=theta_alpha_decay,
+        )
+    raise ValueError(f"Unsupported physics loss mode: {mode}")
+
+
+def compute_tc2020_curve_thickness(
+    afdd: torch.Tensor,
+    atdd: torch.Tensor,
+    theta_alpha: torch.Tensor,
+    theta_alpha_decay: torch.Tensor | None,
+    enable_decay: bool,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """根据 TC2020 曲线先验构造冰厚参考曲线。"""
+    alpha = F.softplus(theta_alpha)
+    if theta_alpha_decay is None:
+        alpha_decay = alpha.new_tensor(1.0)
+    else:
+        alpha_decay = F.softplus(theta_alpha_decay)
+
+    h_grow = alpha * torch.sqrt(torch.clamp(afdd, min=0.0))
+    if enable_decay:
+        h_curve = h_grow - alpha_decay * torch.clamp(atdd, min=0.0)
+    else:
+        h_curve = h_grow
+    return h_curve, alpha, alpha_decay
+
+
+def _compute_legacy_stefan_loss(
+    *,
+    predictions_transformed: torch.Tensor,
+    physics_context: dict[str, torch.Tensor],
+    physics_cfg: dict,
+    target_transform: str,
+    theta_kappa: torch.Tensor | None,
+) -> PhysicsLossBreakdown:
     if theta_kappa is None:
-        raise ValueError("Physics loss is enabled but theta_kappa is not initialized.")
+        raise ValueError("Physics loss mode 'legacy_stefan' requires theta_kappa to be initialized.")
 
     # 物理约束必须在真实冰厚空间中计算，不能直接在 log1p 等变换空间中做。
     pred_ice = inverse_transform_target_tensor(
@@ -118,12 +190,8 @@ def compute_physics_loss(
     # h_t^2 - h_{t-1}^2 ≈ kappa * delta_F
     # 残差越接近 0，说明预测越符合所设定的结冰增长规律。
     stefan_residual = (pred_ice.square() - prev_ice.square()) - kappa * delta_F
-
-    grow_mask_float = grow_mask.float()
     # 只对满足 grow_mask 的样本求均值；分母加上极小值，避免全空掩码时除零。
-    loss_stefan = (grow_mask_float * stefan_residual.square()).sum() / (
-        grow_mask_float.sum() + 1.0e-8
-    )
+    loss_stefan = _masked_mean(stefan_residual.square(), grow_mask)
     # 非负约束：当预测冰厚 < 0 时触发惩罚，否则为 0。
     loss_nonneg = torch.relu(-pred_ice).square().mean()
     # 总物理损失由多个分量按权重线性组合。
@@ -132,7 +200,89 @@ def compute_physics_loss(
         + float(physics_cfg.get("lambda_nn", 1.0)) * loss_nonneg
     )
     return PhysicsLossBreakdown(
-        stefan=loss_stefan, nonneg=loss_nonneg, total=total, kappa=kappa
+        stefan=loss_stefan,
+        curve_grow=predictions_transformed.new_zeros(()),
+        curve_decay=predictions_transformed.new_zeros(()),
+        nonneg=loss_nonneg,
+        total=total,
+        kappa=kappa,
+        alpha=predictions_transformed.new_zeros(()),
+        alpha_decay=predictions_transformed.new_zeros(()),
+    )
+
+
+def _compute_tc2020_curve_loss(
+    *,
+    predictions_transformed: torch.Tensor,
+    physics_context: dict[str, torch.Tensor],
+    physics_cfg: dict,
+    target_transform: str,
+    theta_alpha: torch.Tensor | None,
+    theta_alpha_decay: torch.Tensor | None,
+) -> PhysicsLossBreakdown:
+    if theta_alpha is None:
+        raise ValueError("Physics loss mode 'tc2020_curve' requires theta_alpha to be initialized.")
+
+    lambda_curve_grow = float(
+        _require_physics_config_value(physics_cfg, "lambda_curve_grow")
+    )
+    lambda_curve_decay = float(
+        _require_physics_config_value(physics_cfg, "lambda_curve_decay")
+    )
+    lambda_nn = float(_require_physics_config_value(physics_cfg, "lambda_nn"))
+    enable_decay = bool(_require_physics_config_value(physics_cfg, "enable_decay"))
+
+    pred_ice = inverse_transform_target_tensor(
+        predictions_transformed, target_transform
+    )
+
+    # AFDD/ATDD 分别表示累计冻结度日和累计融化度日：
+    # AFDD 控制结冰阶段的曲线抬升，ATDD 则在启用消融项时控制厚度回落。
+    afdd = _get_physics_field(physics_context, "afdd", pred_ice.device)
+    atdd = _get_physics_field(physics_context, "atdd", pred_ice.device)
+    growth_phase = (
+        _get_physics_field(physics_context, "is_growth_phase", pred_ice.device) > 0.5
+    )
+    decay_phase = (
+        _get_physics_field(physics_context, "is_decay_phase", pred_ice.device) > 0.5
+    )
+    stable_mask = (
+        _get_physics_field(physics_context, "stable_ice_mask", pred_ice.device) > 0.5
+    )
+
+    h_curve, alpha, alpha_decay = compute_tc2020_curve_thickness(
+        afdd=afdd,
+        atdd=atdd,
+        theta_alpha=theta_alpha,
+        theta_alpha_decay=theta_alpha_decay,
+        enable_decay=enable_decay,
+    )
+
+    # 曲线约束只在 stable mask 内启用：
+    # 这些样本通常已经进入稳定结冰/消融阶段，AFDD/ATDD 与厚度关系更可解释，
+    # 能减少初冻、融尽或观测噪声较大阶段对曲线先验的误导。
+    grow_mask = growth_phase & stable_mask
+    decay_mask = decay_phase & stable_mask & enable_decay
+
+    loss_curve_grow = _masked_mean((pred_ice - h_curve).pow(2), grow_mask)
+    loss_curve_decay = _masked_mean((pred_ice - h_curve).pow(2), decay_mask)
+
+    # 非负项保持与现有实现一致，避免新模式改动主监督外的基础约束行为。
+    loss_nonneg = torch.relu(-pred_ice).square().mean()
+    total = (
+        lambda_curve_grow * loss_curve_grow
+        + lambda_curve_decay * loss_curve_decay
+        + lambda_nn * loss_nonneg
+    )
+    return PhysicsLossBreakdown(
+        stefan=predictions_transformed.new_zeros(()),
+        curve_grow=loss_curve_grow,
+        curve_decay=loss_curve_decay,
+        nonneg=loss_nonneg,
+        total=total,
+        kappa=predictions_transformed.new_zeros(()),
+        alpha=alpha,
+        alpha_decay=alpha_decay,
     )
 
 
@@ -177,3 +327,16 @@ def _get_physics_field(
     if field_name not in physics_context:
         raise ValueError(f"Physics loss requires '{field_name}' in physics_context.")
     return physics_context[field_name].to(device)
+
+
+def _masked_mean(values: torch.Tensor, mask: torch.Tensor | bool) -> torch.Tensor:
+    mask_float = mask.float()
+    return (values * mask_float).sum() / (mask_float.sum() + 1.0e-8)
+
+
+def _require_physics_config_value(physics_cfg: dict, field_name: str) -> object:
+    if field_name not in physics_cfg:
+        raise ValueError(
+            f"Physics loss mode '{physics_cfg.get('mode', 'legacy_stefan')}' requires config field '{field_name}'."
+        )
+    return physics_cfg[field_name]

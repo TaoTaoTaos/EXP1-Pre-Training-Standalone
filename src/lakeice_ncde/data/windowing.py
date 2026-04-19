@@ -9,7 +9,7 @@ import pandas as pd
 import torch
 
 from lakeice_ncde.data.scaling import apply_feature_scaler, fit_feature_scaler, transform_target
-from lakeice_ncde.utils.io import save_dataframe, save_yaml
+from lakeice_ncde.utils.io import save_dataframe, save_torch, save_yaml
 
 
 @dataclass
@@ -211,7 +211,7 @@ def build_window_bundles(
         manifest_path = split_dir / f"{current_split}_windows_manifest.yaml"
         scaler_path = split_dir / "feature_scaler.yaml"
 
-        torch.save(bundle, bundle_path)
+        save_torch(bundle, bundle_path)
         metadata_df = pd.DataFrame(metadata_rows)
         save_dataframe(metadata_df, metadata_path)
         save_yaml(

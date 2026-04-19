@@ -1,9 +1,8 @@
 search:
-  name: "EXP2_test_r2_search_narrow"
+  name: "EXP2_test_r2_search_narrow_safe64"
   base_batch_config: "configs/experiments/Run-EXP2.yaml"
-  output_root: "outputs/search_runs/EXP2_test_r2_search_narrow"
-  n_trials: 10
-
+  output_root: "outputs/search_runs/EXP2_test_r2_search_narrow_safe64"
+  n_trials: 64
 
   sampler:
     name: "tpe"

@@ -1,6 +1,0 @@
-split_name: EXP0_pretrain_autoreg
-split: val
-bundle_path: S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\windows_EXP0_pretrain_autoreg\EXP0_pretrain_autoreg\val_windows.pt
-metadata_path: S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\windows_EXP0_pretrain_autoreg\EXP0_pretrain_autoreg\val_windows_metadata.csv
-feature_scaler_path: S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\windows_EXP0_pretrain_autoreg\EXP0_pretrain_autoreg\feature_scaler.yaml
-count: 51

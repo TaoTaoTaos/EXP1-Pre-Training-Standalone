@@ -1,6 +1,0 @@
-split_name: EXP2_transfer_autoreg_stefan
-split: val
-bundle_path: S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\windows_EXP2_transfer_autoreg_stefan\EXP2_transfer_autoreg_stefan\val_windows.pt
-metadata_path: S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\windows_EXP2_transfer_autoreg_stefan\EXP2_transfer_autoreg_stefan\val_windows_metadata.csv
-feature_scaler_path: S:\STU-Papers\My_Papers\EXP1-Pre-Training-Standalone\data\windows_EXP2_transfer_autoreg_stefan\EXP2_transfer_autoreg_stefan\feature_scaler.yaml
-count: 58

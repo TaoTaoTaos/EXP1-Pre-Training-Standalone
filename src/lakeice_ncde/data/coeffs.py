@@ -6,7 +6,7 @@ from typing import Any
 import pandas as pd
 import torch
 
-from lakeice_ncde.utils.io import save_dataframe, save_yaml
+from lakeice_ncde.utils.io import save_dataframe, save_torch, save_yaml
 
 
 def _require_torchcde():
@@ -82,7 +82,7 @@ def save_coeff_bundle(
     metadata_path = split_dir / f"{split}_{coeff_bundle['interpolation']}_coeffs_metadata.csv"
     manifest_path = split_dir / f"{split}_{coeff_bundle['interpolation']}_coeffs_manifest.yaml"
 
-    torch.save(coeff_bundle, coeff_path)
+    save_torch(coeff_bundle, coeff_path)
     metadata_df = pd.DataFrame(coeff_bundle["metadata"]).copy()
     metadata_df["coeff_shape"] = coeff_bundle["coeff_shapes"]
     save_dataframe(metadata_df, metadata_path)

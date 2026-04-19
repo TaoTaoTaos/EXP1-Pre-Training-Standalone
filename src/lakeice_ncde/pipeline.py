@@ -11,7 +11,13 @@ import torch
 from lakeice_ncde.config import apply_key_value_overrides, load_config
 from lakeice_ncde.data.coeffs import compute_coefficients_for_windows, save_coeff_bundle
 from lakeice_ncde.data.datasets import create_dataloader
-from lakeice_ncde.data.load_excel import filter_include_lakes, load_raw_excel, standardize_dataframe
+from lakeice_ncde.data.load_excel import (
+    filter_include_lakes,
+    load_raw_excel,
+    resolve_required_physics_columns,
+    resolve_tc2020_curve_preprocessing_config,
+    standardize_dataframe,
+)
 from lakeice_ncde.data.split import (
     build_lolo_assignments,
     make_default_split,
@@ -26,6 +32,7 @@ from lakeice_ncde.experiment.tracker import RunContext, create_run_context
 from lakeice_ncde.models.neural_cde import build_model
 from lakeice_ncde.training.engine import Trainer
 from lakeice_ncde.utils.io import load_dataframe, save_dataframe, save_json as io_save_json
+from lakeice_ncde.utils.locking import PathLock
 from lakeice_ncde.utils.logging import setup_logging
 from lakeice_ncde.utils.paths import ProjectPaths, build_pdf_name, resolve_paths
 from lakeice_ncde.utils.seed import set_seed
@@ -56,11 +63,23 @@ def resolve_runtime(project_root: Path, config_path: str, override_paths: list[s
 
 def validate_and_save(config: dict, paths: ProjectPaths, logger) -> dict[str, Any]:
     """Validate the raw Excel file and save a report."""
-    df = load_raw_excel(paths.raw_excel, sheet_name=config["data"].get("excel_sheet_name"))
-    report = validate_dataframe(df, config, paths.raw_excel)
-    io_save_json(report, paths.validation_report_json)
-    logger.info("Validation report saved to %s", paths.validation_report_json)
-    return report
+    if paths.validation_report_json.exists():
+        report = json.loads(paths.validation_report_json.read_text(encoding="utf-8"))
+        logger.info("Reusing cached validation report: %s", paths.validation_report_json)
+        return report
+
+    lock_path = paths.validation_report_json.with_name(f"{paths.validation_report_json.name}.lock")
+    with PathLock(lock_path):
+        if paths.validation_report_json.exists():
+            report = json.loads(paths.validation_report_json.read_text(encoding="utf-8"))
+            logger.info("Reusing cached validation report: %s", paths.validation_report_json)
+            return report
+
+        df = load_raw_excel(paths.raw_excel, sheet_name=config["data"].get("excel_sheet_name"))
+        report = validate_dataframe(df, config, paths.raw_excel)
+        io_save_json(report, paths.validation_report_json)
+        logger.info("Validation report saved to %s", paths.validation_report_json)
+        return report
 
 
 def prepare_dataframe_artifact(config: dict, paths: ProjectPaths, logger) -> tuple[pd.DataFrame, dict]:
@@ -68,6 +87,10 @@ def prepare_dataframe_artifact(config: dict, paths: ProjectPaths, logger) -> tup
     raw_df = load_raw_excel(paths.raw_excel, sheet_name=config["data"].get("excel_sheet_name"))
     prepared_df, schema = standardize_dataframe(raw_df, config)
     save_dataframe(prepared_df, paths.prepared_csv)
+    io_save_json(
+        _build_prepared_dataframe_metadata(config, paths),
+        _prepared_dataframe_metadata_path(paths.prepared_csv),
+    )
     io_save_json(schema.to_dict(), paths.feature_schema_json)
     logger.info("Prepared dataframe saved to %s", paths.prepared_csv)
     return prepared_df, schema.to_dict()
@@ -75,24 +98,76 @@ def prepare_dataframe_artifact(config: dict, paths: ProjectPaths, logger) -> tup
 
 def load_or_prepare_dataframe(config: dict, paths: ProjectPaths, logger) -> pd.DataFrame:
     """Load the prepared dataframe or create it on demand."""
-    if paths.prepared_csv.exists():
-        prepared_df = load_dataframe(paths.prepared_csv, parse_dates=[config["data"]["datetime_column"]])
-        required_columns = {
-            config["data"]["lake_column"],
-            config["data"]["datetime_column"],
-            config["data"]["target_column"],
-            *config["features"]["feature_columns"],
-        }
-        missing_columns = sorted(column for column in required_columns if column not in prepared_df.columns)
-        if not missing_columns:
-            return filter_include_lakes(prepared_df, config)
-        logger.warning(
-            "Prepared dataframe is missing required columns %s. Rebuilding %s from the raw Excel source.",
-            missing_columns,
-            paths.prepared_csv,
+    lock_path = paths.prepared_csv.with_name(f"{paths.prepared_csv.name}.lock")
+    with PathLock(lock_path):
+        if paths.prepared_csv.exists():
+            prepared_df = load_dataframe(paths.prepared_csv, parse_dates=[config["data"]["datetime_column"]])
+            required_physics_columns = resolve_required_physics_columns(config)
+            expected_metadata = _build_prepared_dataframe_metadata(config, paths)
+            physics_mode = expected_metadata["physics_loss_mode"]
+            required_columns = {
+                config["data"]["lake_column"],
+                config["data"]["datetime_column"],
+                config["data"]["target_column"],
+                *config["features"]["feature_columns"],
+                *required_physics_columns.values(),
+            }
+            if physics_mode == "tc2020_curve":
+                tc2020_cfg = resolve_tc2020_curve_preprocessing_config(config)
+                required_columns.add(str(tc2020_cfg["temperature_column"]))
+            missing_columns = sorted(column for column in required_columns if column not in prepared_df.columns)
+            metadata_path = _prepared_dataframe_metadata_path(paths.prepared_csv)
+            cached_metadata = _load_prepared_dataframe_metadata(metadata_path)
+            if not missing_columns and cached_metadata == expected_metadata:
+                return filter_include_lakes(prepared_df, config)
+            if missing_columns:
+                logger.warning(
+                    "Prepared dataframe is missing required columns %s. Rebuilding %s from the raw Excel source.",
+                    missing_columns,
+                    paths.prepared_csv,
+                )
+            else:
+                logger.warning(
+                    "Prepared dataframe preprocessing metadata is missing or stale at %s. Rebuilding %s from the raw Excel source.",
+                    metadata_path,
+                    paths.prepared_csv,
+                )
+        prepared_df, _ = prepare_dataframe_artifact(config, paths, logger)
+        return prepared_df
+
+
+def _prepared_dataframe_metadata_path(prepared_csv_path: Path) -> Path:
+    return prepared_csv_path.with_name(f"{prepared_csv_path.stem}_metadata.json")
+
+
+def _build_prepared_dataframe_metadata(
+    config: dict,
+    paths: ProjectPaths,
+) -> dict[str, Any]:
+    physics_cfg = config["train"].get("physics_loss", {})
+    physics_mode = str(physics_cfg.get("mode", "legacy_stefan"))
+    metadata: dict[str, Any] = {
+        "format_version": 1,
+        "raw_excel_path": str(paths.raw_excel),
+        "excel_sheet_name": config["data"].get("excel_sheet_name"),
+        "physics_loss_enabled": bool(physics_cfg.get("enabled", False)),
+        "physics_loss_mode": physics_mode,
+        "required_physics_columns": resolve_required_physics_columns(config),
+    }
+    if physics_mode == "tc2020_curve":
+        metadata["tc2020_curve_preprocessing"] = resolve_tc2020_curve_preprocessing_config(
+            config
         )
-    prepared_df, _ = prepare_dataframe_artifact(config, paths, logger)
-    return prepared_df
+    return metadata
+
+
+def _load_prepared_dataframe_metadata(metadata_path: Path) -> dict[str, Any] | None:
+    if not metadata_path.exists():
+        return None
+    try:
+        return json.loads(metadata_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
 
 
 def make_split_artifacts(config: dict, paths: ProjectPaths, logger) -> list[Path]:

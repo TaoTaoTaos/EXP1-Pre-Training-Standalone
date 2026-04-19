@@ -53,13 +53,51 @@ class Trainer:
         self.device = self._resolve_device(config["train"]["device"])
         self.model.to(self.device)
         self.criterion = build_loss(config)
-        self.physics_loss_enabled = bool(config["train"].get("physics_loss", {}).get("enabled", False))
+        physics_cfg = config["train"].get("physics_loss", {})
+        self.physics_loss_enabled = bool(physics_cfg.get("enabled", False))
+        self.physics_loss_mode = str(physics_cfg.get("mode", "legacy_stefan"))
         self.theta_kappa: nn.Parameter | None = None
+        self.theta_alpha: nn.Parameter | None = None
+        self.theta_alpha_decay: nn.Parameter | None = None
         optimizer_parameters = list(self.model.parameters())
         if self.physics_loss_enabled:
-            init_kappa = float(config["train"]["physics_loss"].get("init_kappa", 1.0))
-            self.theta_kappa = nn.Parameter(torch.tensor(inverse_softplus(init_kappa), dtype=torch.float32, device=self.device))
-            optimizer_parameters.append(self.theta_kappa)
+            if self.physics_loss_mode == "legacy_stefan":
+                init_kappa = float(physics_cfg.get("init_kappa", 1.0))
+                self.theta_kappa = nn.Parameter(
+                    torch.tensor(
+                        inverse_softplus(init_kappa),
+                        dtype=torch.float32,
+                        device=self.device,
+                    )
+                )
+                optimizer_parameters.append(self.theta_kappa)
+            elif self.physics_loss_mode == "tc2020_curve":
+                init_alpha = float(_require_physics_config_value(physics_cfg, "init_alpha"))
+                self.theta_alpha = nn.Parameter(
+                    torch.tensor(
+                        inverse_softplus(init_alpha),
+                        dtype=torch.float32,
+                        device=self.device,
+                    )
+                )
+                optimizer_parameters.append(self.theta_alpha)
+                enable_decay = bool(_require_physics_config_value(physics_cfg, "enable_decay"))
+                if enable_decay:
+                    init_alpha_decay = float(
+                        _require_physics_config_value(physics_cfg, "init_alpha_decay")
+                    )
+                    self.theta_alpha_decay = nn.Parameter(
+                        torch.tensor(
+                            inverse_softplus(init_alpha_decay),
+                            dtype=torch.float32,
+                            device=self.device,
+                        )
+                    )
+                    optimizer_parameters.append(self.theta_alpha_decay)
+            else:
+                raise ValueError(
+                    f"Unsupported physics loss mode: {self.physics_loss_mode}"
+                )
         self.optimizer = AdamW(
             optimizer_parameters,
             lr=float(config["train"]["learning_rate"]),
@@ -220,10 +258,17 @@ class Trainer:
                 "device": str(self.device),
                 "train_loss_name": self.config["train"]["loss"],
                 "physics_loss_enabled": bool(self.config["train"].get("physics_loss", {}).get("enabled", False)),
+                "physics_loss_mode": self.physics_loss_mode,
                 "physics_loss_rule": self.config["train"].get("physics_loss", {}).get("rule"),
                 "physics_lambda_st": self.config["train"].get("physics_loss", {}).get("lambda_st"),
                 "physics_lambda_nn": self.config["train"].get("physics_loss", {}).get("lambda_nn"),
                 "physics_kappa": None if self.theta_kappa is None else float(torch.nn.functional.softplus(self.theta_kappa).item()),
+                "physics_alpha": None if self.theta_alpha is None else float(torch.nn.functional.softplus(self.theta_alpha).item()),
+                "physics_alpha_decay": (
+                    1.0
+                    if self.physics_loss_mode == "tc2020_curve" and self.theta_alpha_decay is None
+                    else None if self.theta_alpha_decay is None else float(torch.nn.functional.softplus(self.theta_alpha_decay).item())
+                ),
                 "interpolation": self.config["coeffs"]["interpolation"],
                 "window_days": self.config["window"]["window_days"],
                 "target_transform": target_transform,
@@ -252,16 +297,23 @@ class Trainer:
             "config": self.config,
             "best_metric": self.best_metric,
             "theta_kappa_state": None if self.theta_kappa is None else self.theta_kappa.detach().cpu().clone(),
+            "theta_alpha_state": None if self.theta_alpha is None else self.theta_alpha.detach().cpu().clone(),
+            "theta_alpha_decay_state": None if self.theta_alpha_decay is None else self.theta_alpha_decay.detach().cpu().clone(),
         }
 
     def _restore_checkpoint_state(self, checkpoint: dict[str, Any]) -> None:
         """Restore the model and any extra trainable physics parameters from a checkpoint."""
         self.model.load_state_dict(checkpoint["model_state_dict"])
         theta_kappa_state = checkpoint.get("theta_kappa_state")
-        if self.theta_kappa is None or theta_kappa_state is None:
-            return
         with torch.no_grad():
-            self.theta_kappa.copy_(theta_kappa_state.to(self.device))
+            if self.theta_kappa is not None and theta_kappa_state is not None:
+                self.theta_kappa.copy_(theta_kappa_state.to(self.device))
+            theta_alpha_state = checkpoint.get("theta_alpha_state")
+            if self.theta_alpha is not None and theta_alpha_state is not None:
+                self.theta_alpha.copy_(theta_alpha_state.to(self.device))
+            theta_alpha_decay_state = checkpoint.get("theta_alpha_decay_state")
+            if self.theta_alpha_decay is not None and theta_alpha_decay_state is not None:
+                self.theta_alpha_decay.copy_(theta_alpha_decay_state.to(self.device))
 
     def _run_epoch(self, loader: DataLoader, train: bool, epoch: int, max_epochs: int) -> float:
         self.model.train(mode=train)
@@ -280,6 +332,8 @@ class Trainer:
                 config=self.config,
                 target_transform=self.config["features"]["target_transform"],
                 theta_kappa=self.theta_kappa,
+                theta_alpha=self.theta_alpha,
+                theta_alpha_decay=self.theta_alpha_decay,
             )
             loss = base_loss + physics_breakdown.total
             check_loss_is_finite(loss)
@@ -296,21 +350,44 @@ class Trainer:
             losses.append(batch_loss)
             running_loss = float(np.mean(losses))
             if self.physics_loss_enabled:
-                self.logger.info(
-                    "Epoch %d/%d | %s batch %d/%d | batch_loss=%.8f | base_loss=%.8f | loss_stefan=%.8f | loss_nonneg=%.8f | physics_total=%.8f | kappa=%.8f | running_loss=%.8f",
-                    epoch,
-                    max_epochs,
-                    phase,
-                    batch_index,
-                    total_batches,
-                    batch_loss,
-                    float(base_loss.item()),
-                    float(physics_breakdown.stefan.item()),
-                    float(physics_breakdown.nonneg.item()),
-                    float(physics_breakdown.total.item()),
-                    float(physics_breakdown.kappa.item()),
-                    running_loss,
-                )
+                if self.physics_loss_mode == "legacy_stefan":
+                    self.logger.info(
+                        "Epoch %d/%d | %s batch %d/%d | batch_loss=%.8f | base_loss=%.8f | loss_stefan=%.8f | loss_nonneg=%.8f | physics_total=%.8f | kappa=%.8f | running_loss=%.8f",
+                        epoch,
+                        max_epochs,
+                        phase,
+                        batch_index,
+                        total_batches,
+                        batch_loss,
+                        float(base_loss.item()),
+                        float(physics_breakdown.stefan.item()),
+                        float(physics_breakdown.nonneg.item()),
+                        float(physics_breakdown.total.item()),
+                        float(physics_breakdown.kappa.item()),
+                        running_loss,
+                    )
+                elif self.physics_loss_mode == "tc2020_curve":
+                    self.logger.info(
+                        "Epoch %d/%d | %s batch %d/%d | batch_loss=%.8f | base_loss=%.8f | loss_curve_grow=%.8f | loss_curve_decay=%.8f | loss_nonneg=%.8f | physics_total=%.8f | alpha=%.8f | alpha_decay=%.8f | running_loss=%.8f",
+                        epoch,
+                        max_epochs,
+                        phase,
+                        batch_index,
+                        total_batches,
+                        batch_loss,
+                        float(base_loss.item()),
+                        float(physics_breakdown.curve_grow.item()),
+                        float(physics_breakdown.curve_decay.item()),
+                        float(physics_breakdown.nonneg.item()),
+                        float(physics_breakdown.total.item()),
+                        float(physics_breakdown.alpha.item()),
+                        float(physics_breakdown.alpha_decay.item()),
+                        running_loss,
+                    )
+                else:
+                    raise ValueError(
+                        f"Unsupported physics loss mode: {self.physics_loss_mode}"
+                    )
             else:
                 self.logger.info(
                     "Epoch %d/%d | %s batch %d/%d | batch_loss=%.8f | running_loss=%.8f",
@@ -350,3 +427,11 @@ class Trainer:
         if isinstance(coeff, tuple):
             return tuple(component.to(self.device) for component in coeff)
         return coeff.to(self.device)
+
+
+def _require_physics_config_value(physics_cfg: dict, field_name: str) -> object:
+    if field_name not in physics_cfg:
+        raise ValueError(
+            f"Physics loss mode '{physics_cfg.get('mode', 'legacy_stefan')}' requires config field '{field_name}'."
+        )
+    return physics_cfg[field_name]
