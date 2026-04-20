@@ -88,25 +88,7 @@ def write_search_outputs(
     parameter_rows = [row for record in records for row in record.parameter_rows]
     experiment_rows = [row for record in records for row in record.experiment_rows]
 
-    master_df = _build_dataframe(master_rows, leading_columns=[
-        "trial_number",
-        "trial_status",
-        "score",
-        "threshold_met",
-        "duration_seconds",
-        "worker_pid",
-        "objective_experiment",
-        "objective_split",
-        "objective_metric",
-        "objective_metric_value",
-        "error_message",
-        "path.batch_run_dir",
-        "path.batch_pdf",
-        "path.batch_excel",
-        "path.exp0_run_dir",
-        "path.exp1_run_dir",
-        "path.exp2_run_dir",
-    ])
+    master_df = _build_master_dataframe(master_rows)
     parameters_df = _build_dataframe(parameter_rows, leading_columns=[
         "trial_number",
         "trial_status",
@@ -194,13 +176,63 @@ def _build_study_summary(
     return summary
 
 
-def _build_dataframe(rows: list[dict[str, Any]], leading_columns: list[str]) -> pd.DataFrame:
+def _build_master_dataframe(rows: list[dict[str, Any]]) -> pd.DataFrame:
+    return _build_dataframe(
+        rows,
+        leading_columns=[
+            "trial_number",
+            "trial_status",
+            "score",
+            "threshold_met",
+            "duration_seconds",
+            "worker_pid",
+            "objective_experiment",
+            "objective_split",
+            "objective_metric",
+            "objective_metric_value",
+            "error_message",
+        ],
+        trailing_sort_key=_master_column_sort_key,
+    )
+
+
+def _build_dataframe(
+    rows: list[dict[str, Any]],
+    leading_columns: list[str],
+    trailing_sort_key=None,
+) -> pd.DataFrame:
     if not rows:
         return pd.DataFrame(columns=leading_columns)
     df = pd.DataFrame(rows)
     leading = [column for column in leading_columns if column in df.columns]
-    trailing = sorted(column for column in df.columns if column not in leading)
+    trailing = sorted(
+        (column for column in df.columns if column not in leading),
+        key=trailing_sort_key,
+    )
     return df.loc[:, [*leading, *trailing]]
+
+
+def _master_column_sort_key(column: str) -> tuple[int, str, str]:
+    experiment_name, _, remainder = column.partition(".")
+
+    if ".metrics.test." in column:
+        category = 0
+    elif ".metrics.val." in column:
+        category = 1
+    elif ".metrics.train." in column:
+        category = 2
+    elif ".summary." in column:
+        category = 3
+    elif ".metrics." in column:
+        category = 4
+    elif column.startswith("path."):
+        category = 5
+    elif column.startswith("param."):
+        category = 6
+    else:
+        category = 7
+
+    return category, experiment_name, remainder
 
 
 def _normalize_row(row: dict[str, Any]) -> dict[str, Any]:

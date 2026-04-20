@@ -6,7 +6,7 @@ import pandas as pd
 
 from lakeice_ncde.pipeline import plot_from_run
 from lakeice_ncde.utils.io import save_dataframe, save_json, save_yaml
-from lakeice_ncde.visualization.pdf_report import _collect_report_data
+from lakeice_ncde.visualization.pdf_report import _build_physics_pairs, _collect_report_data
 
 
 def _write_minimal_report_run(tmp_path: Path) -> tuple[Path, Path]:
@@ -184,3 +184,43 @@ def test_plot_from_run_does_not_raise_when_pdf_build_fails(tmp_path: Path, monke
 
     assert logger.exception_calls == [f"Failed to build PDF report for {run_dir}"]
     assert not logger.info_calls
+
+
+def test_build_physics_pairs_uses_tc2020_specific_fields() -> None:
+    physics_pairs = dict(
+        _build_physics_pairs(
+            {
+                "enabled": True,
+                "mode": "tc2020_curve",
+                "lambda_curve_grow": 1.0e-5,
+                "lambda_curve_decay": 9.0e-6,
+                "lambda_nn": 1.0,
+                "enable_decay": True,
+                "init_alpha": 1.6,
+                "init_alpha_decay": 1.0,
+                "temperature_column": "Air_Temperature_celsius",
+                "afdd_column": "afdd",
+                "atdd_column": "atdd",
+                "growth_phase_column": "is_growth_phase",
+                "decay_phase_column": "is_decay_phase",
+                "stable_ice_mask_column": "stable_ice_mask",
+                "season_start_month": 11,
+                "stable_ice_min_m": 0.03,
+                "phase_tolerance_m": 0.0012,
+            },
+            {
+                "physics_lambda_curve_grow": 1.0e-5,
+                "physics_lambda_curve_decay": 9.0e-6,
+                "physics_enable_decay": True,
+                "physics_alpha": 1.5,
+                "physics_alpha_decay": 0.94,
+            },
+        )
+    )
+
+    assert physics_pairs["train.physics_loss.mode"] == "tc2020_curve"
+    assert physics_pairs["train.physics_loss.lambda_curve_grow"] == "1e-05"
+    assert physics_pairs["run_summary.physics_lambda_curve_decay"] == "9e-06"
+    assert physics_pairs["run_summary.physics_alpha"] == "1.5"
+    assert "train.physics_loss.lambda_st" not in physics_pairs
+    assert "run_summary.physics_kappa" not in physics_pairs

@@ -264,22 +264,7 @@ def _build_setup_section(report_data: dict[str, Any], styles) -> list[Any]:
     if physics_cfg.get("enabled", False):
         story.append(Spacer(1, 10))
         story.append(Paragraph("Physics Loss Configuration", styles["Heading3"]))
-        physics_pairs = [
-            ("train.physics_loss.rule", str(physics_cfg.get("rule", "none"))),
-            ("train.physics_loss.lambda_st", str(physics_cfg.get("lambda_st", "n/a"))),
-            ("train.physics_loss.lambda_nn", str(physics_cfg.get("lambda_nn", "n/a"))),
-            ("train.physics_loss.init_kappa", str(physics_cfg.get("init_kappa", "n/a"))),
-            ("run_summary.physics_kappa", str(run_summary.get("physics_kappa", "n/a"))),
-            ("train.physics_loss.min_prev_ice_m", str(physics_cfg.get("min_prev_ice_m", "n/a"))),
-            (
-                "train.physics_loss.grow_temp_threshold_celsius",
-                str(physics_cfg.get("grow_temp_threshold_celsius", "n/a")),
-            ),
-            ("train.physics_loss.prev_ice_column", str(physics_cfg.get("prev_ice_column", "n/a"))),
-            ("train.physics_loss.gap_days_column", str(physics_cfg.get("gap_days_column", "n/a"))),
-            ("train.physics_loss.temperature_column", str(physics_cfg.get("temperature_column", "n/a"))),
-            ("train.physics_loss.prev_available_column", str(physics_cfg.get("prev_available_column", "n/a"))),
-        ]
+        physics_pairs = _build_physics_pairs(physics_cfg, run_summary)
         story.append(
             _build_key_value_pairs_table(
                 physics_pairs,
@@ -291,6 +276,55 @@ def _build_setup_section(report_data: dict[str, Any], styles) -> list[Any]:
             )
         )
     return story
+
+
+def _build_physics_pairs(
+    physics_cfg: dict[str, Any],
+    run_summary: dict[str, Any],
+) -> list[tuple[str, str]]:
+    mode = str(physics_cfg.get("mode", "legacy_stefan"))
+    common_pairs = [
+        ("train.physics_loss.mode", mode),
+        ("train.physics_loss.lambda_nn", str(physics_cfg.get("lambda_nn", "n/a"))),
+    ]
+    if mode == "tc2020_curve":
+        return common_pairs + [
+            ("train.physics_loss.lambda_curve_grow", str(physics_cfg.get("lambda_curve_grow", "n/a"))),
+            ("run_summary.physics_lambda_curve_grow", str(run_summary.get("physics_lambda_curve_grow", "n/a"))),
+            ("train.physics_loss.lambda_curve_decay", str(physics_cfg.get("lambda_curve_decay", "n/a"))),
+            ("run_summary.physics_lambda_curve_decay", str(run_summary.get("physics_lambda_curve_decay", "n/a"))),
+            ("train.physics_loss.enable_decay", str(physics_cfg.get("enable_decay", "n/a"))),
+            ("run_summary.physics_enable_decay", str(run_summary.get("physics_enable_decay", "n/a"))),
+            ("train.physics_loss.init_alpha", str(physics_cfg.get("init_alpha", "n/a"))),
+            ("run_summary.physics_alpha", str(run_summary.get("physics_alpha", "n/a"))),
+            ("train.physics_loss.init_alpha_decay", str(physics_cfg.get("init_alpha_decay", "n/a"))),
+            ("run_summary.physics_alpha_decay", str(run_summary.get("physics_alpha_decay", "n/a"))),
+            ("train.physics_loss.temperature_column", str(physics_cfg.get("temperature_column", "n/a"))),
+            ("train.physics_loss.afdd_column", str(physics_cfg.get("afdd_column", "n/a"))),
+            ("train.physics_loss.atdd_column", str(physics_cfg.get("atdd_column", "n/a"))),
+            ("train.physics_loss.growth_phase_column", str(physics_cfg.get("growth_phase_column", "n/a"))),
+            ("train.physics_loss.decay_phase_column", str(physics_cfg.get("decay_phase_column", "n/a"))),
+            ("train.physics_loss.stable_ice_mask_column", str(physics_cfg.get("stable_ice_mask_column", "n/a"))),
+            ("train.physics_loss.season_start_month", str(physics_cfg.get("season_start_month", "n/a"))),
+            ("train.physics_loss.stable_ice_min_m", str(physics_cfg.get("stable_ice_min_m", "n/a"))),
+            ("train.physics_loss.phase_tolerance_m", str(physics_cfg.get("phase_tolerance_m", "n/a"))),
+        ]
+    return common_pairs + [
+        ("train.physics_loss.rule", str(physics_cfg.get("rule", "none"))),
+        ("train.physics_loss.lambda_st", str(physics_cfg.get("lambda_st", "n/a"))),
+        ("run_summary.physics_lambda_st", str(run_summary.get("physics_lambda_st", "n/a"))),
+        ("train.physics_loss.init_kappa", str(physics_cfg.get("init_kappa", "n/a"))),
+        ("run_summary.physics_kappa", str(run_summary.get("physics_kappa", "n/a"))),
+        ("train.physics_loss.min_prev_ice_m", str(physics_cfg.get("min_prev_ice_m", "n/a"))),
+        (
+            "train.physics_loss.grow_temp_threshold_celsius",
+            str(physics_cfg.get("grow_temp_threshold_celsius", "n/a")),
+        ),
+        ("train.physics_loss.prev_ice_column", str(physics_cfg.get("prev_ice_column", "n/a"))),
+        ("train.physics_loss.gap_days_column", str(physics_cfg.get("gap_days_column", "n/a"))),
+        ("train.physics_loss.temperature_column", str(physics_cfg.get("temperature_column", "n/a"))),
+        ("train.physics_loss.prev_available_column", str(physics_cfg.get("prev_available_column", "n/a"))),
+    ]
 
 
 def _build_data_selection_section(report_data: dict[str, Any], styles) -> list[Any]:

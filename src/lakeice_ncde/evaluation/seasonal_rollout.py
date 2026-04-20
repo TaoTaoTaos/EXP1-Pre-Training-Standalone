@@ -78,6 +78,7 @@ def run_seasonal_rollout(
     save_dataframe(predictions_df, predictions_path)
 
     overlap_df = predictions_df.loc[predictions_df["y_true"].notna()].copy()
+    metric_overlap_df = filter_finite_prediction_pairs(overlap_df)
     overlap_predictions_path = run_dir / "seasonal_rollout_overlap_predictions.csv"
     save_dataframe(overlap_df, overlap_predictions_path)
     test_start = _resolve_rollout_test_start(rollout_cfg)
@@ -88,6 +89,8 @@ def run_seasonal_rollout(
     if overlap_df.empty:
         overlap_metrics = {
             "count": 0,
+            "observed_count": 0,
+            "invalid_prediction_count": 0,
             "rollout_rows": int(len(predictions_df)),
             "test_start_datetime": str(test_start),
             "rollout_start_datetime": None if full_start is None else str(full_start),
@@ -96,15 +99,31 @@ def run_seasonal_rollout(
             "overlap_end_datetime": None,
         }
     else:
+        metric_values = (
+            {
+                "rmse": np.nan,
+                "mae": np.nan,
+                "r2": np.nan,
+                "bias": np.nan,
+                "negative_count": np.nan,
+            }
+            if metric_overlap_df.empty
+            else compute_regression_metrics(
+                metric_overlap_df["y_true"].to_numpy(),
+                metric_overlap_df["y_pred"].to_numpy(),
+            )
+        )
         overlap_metrics = {
-            "count": int(len(overlap_df)),
+            "count": int(len(metric_overlap_df)),
+            "observed_count": int(len(overlap_df)),
+            "invalid_prediction_count": int(len(overlap_df) - len(metric_overlap_df)),
             "rollout_rows": int(len(predictions_df)),
             "test_start_datetime": str(test_start),
             "rollout_start_datetime": None if full_start is None else str(full_start),
             "rollout_end_datetime": None if full_end is None else str(full_end),
             "overlap_start_datetime": None if overlap_start is None else str(overlap_start),
             "overlap_end_datetime": None if overlap_end is None else str(overlap_end),
-            **compute_regression_metrics(overlap_df["y_true"].to_numpy(), overlap_df["y_pred"].to_numpy()),
+            **metric_values,
         }
     overlap_metrics_path = run_dir / "seasonal_rollout_overlap_metrics.csv"
     overlap_metrics_json_path = run_dir / "seasonal_rollout_overlap_metrics.json"
@@ -118,6 +137,15 @@ def run_seasonal_rollout(
         window_path=window_path,
         coeff_path=coeff_path,
     )
+
+
+def filter_finite_prediction_pairs(predictions_df: pd.DataFrame) -> pd.DataFrame:
+    if predictions_df.empty:
+        return predictions_df.copy()
+    y_true = pd.to_numeric(predictions_df["y_true"], errors="coerce")
+    y_pred = pd.to_numeric(predictions_df["y_pred"], errors="coerce")
+    finite_mask = np.isfinite(y_true.to_numpy()) & np.isfinite(y_pred.to_numpy())
+    return predictions_df.loc[finite_mask].copy()
 
 
 def build_seasonal_rollout_dataframe(config: dict[str, Any], prepared_df: pd.DataFrame) -> pd.DataFrame:

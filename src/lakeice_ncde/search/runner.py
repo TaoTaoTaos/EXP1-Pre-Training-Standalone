@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import re
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from dataclasses import dataclass, replace
 from multiprocessing import get_context
 from pathlib import Path
 from typing import Any
@@ -16,6 +18,54 @@ from lakeice_ncde.utils.logging import setup_logging
 from lakeice_ncde.utils.paths import resolve_paths
 
 
+_PREFIXED_SEQUENCE_PATTERN = re.compile(r"^(?P<index>\d+)(?P<suffix>(?:[_-].*)?)$")
+_RUN_SUFFIX_PATTERN = re.compile(r"^(?P<prefix>.*?run)(?P<index>\d+)$", re.IGNORECASE)
+
+
+@dataclass(frozen=True)
+class SearchRootSequence:
+    base_output_root: Path
+    mode: str
+    suffix: str
+    width: int
+    base_index: int
+
+    def existing_roots(self) -> list[tuple[int, Path]]:
+        parent = self.base_output_root.parent
+        if not parent.exists():
+            return []
+
+        roots: list[tuple[int, Path]] = []
+        if self.mode == "prefixed":
+            for candidate in parent.iterdir():
+                if not candidate.is_dir():
+                    continue
+                match = _PREFIXED_SEQUENCE_PATTERN.fullmatch(candidate.name)
+                if match is None or match.group("suffix") != self.suffix:
+                    continue
+                roots.append((int(match.group("index")), candidate))
+        else:
+            if self.base_output_root.is_dir():
+                roots.append((self.base_index, self.base_output_root))
+            prefix = f"{self.base_output_root.name}_run"
+            for candidate in parent.iterdir():
+                if not candidate.is_dir():
+                    continue
+                if candidate == self.base_output_root or not candidate.name.startswith(prefix):
+                    continue
+                index_text = candidate.name.removeprefix(prefix)
+                if index_text.isdigit():
+                    roots.append((int(index_text), candidate))
+        return sorted(roots, key=lambda item: item[0])
+
+    def path_for_index(self, index: int) -> Path:
+        if self.mode == "prefixed":
+            return self.base_output_root.parent / f"{index:0{self.width}d}{self.suffix}"
+        if index == self.base_index:
+            return self.base_output_root
+        return self.base_output_root.parent / f"{self.base_output_root.name}_run{index:0{self.width}d}"
+
+
 def execute_trial_batch(plan: TrialExecutionPlan, logger) -> dict[str, Any]:
     """Run one dynamically resolved batch trial end to end."""
     project_root = Path(plan.batch_config["runtime"]["project_root"])
@@ -29,11 +79,28 @@ def run_search(
     batch_runner: BatchRunner | None = None,
 ) -> dict[str, Any]:
     """Run or resume a parameter search study."""
-    search_config = load_search_config(project_root, config_path)
+    requested_search_config = load_search_config(project_root, config_path)
+    search_config, search_resolution = _resolve_search_config_for_run(requested_search_config)
     search_root = search_config.output_root
     search_root.mkdir(parents=True, exist_ok=True)
     logger = setup_logging(search_root / "search.log")
     save_yaml(search_config.to_dict(), search_root / "search_config_resolved.yaml")
+
+    if search_resolution is not None and search_resolution["action"] == "resume_latest_root":
+        logger.info(
+            "Search base root %s auto-selected latest unfinished root %s with study name '%s'.",
+            search_resolution["base_output_root"],
+            search_resolution["selected_output_root"],
+            search_config.name,
+        )
+    elif search_resolution is not None and search_resolution["action"] == "create_next_root":
+        logger.info(
+            "Search root %s already has %d finished trial(s); starting a fresh sequential root %s with study name '%s'.",
+            search_resolution["completed_output_root"],
+            search_resolution["finished_trial_count"],
+            search_resolution["selected_output_root"],
+            search_config.name,
+        )
 
     batch_runner = batch_runner or execute_trial_batch
     study = _create_or_load_study(search_config, worker_index=0)
@@ -109,6 +176,97 @@ def run_search(
     }
 
 
+def _resolve_search_config_for_run(search_config: SearchConfig) -> tuple[SearchConfig, dict[str, Any] | None]:
+    sequence = _discover_search_root_sequence(search_config.output_root)
+    existing_roots = sequence.existing_roots()
+    if not existing_roots:
+        return search_config, None
+
+    latest_index, latest_root = existing_roots[-1]
+    latest_config = _replace_search_root(search_config, latest_root, latest_index)
+    if not latest_config.storage.path.exists():
+        if latest_root == search_config.output_root and latest_config.name == search_config.name:
+            return latest_config, None
+        return latest_config, {
+            "action": "resume_latest_root",
+            "base_output_root": search_config.output_root,
+            "selected_output_root": latest_root,
+        }
+
+    latest_study = _create_or_load_study(latest_config, worker_index=0)
+    finished_trial_count = _count_finished_trials(latest_study)
+    if finished_trial_count < latest_config.n_trials:
+        if latest_root == search_config.output_root and latest_config.name == search_config.name:
+            return latest_config, None
+        return latest_config, {
+            "action": "resume_latest_root",
+            "base_output_root": search_config.output_root,
+            "selected_output_root": latest_root,
+        }
+
+    next_index = latest_index + 1
+    next_root = sequence.path_for_index(next_index)
+    next_config = _replace_search_root(search_config, next_root, next_index)
+    return next_config, {
+        "action": "create_next_root",
+        "completed_output_root": latest_root,
+        "selected_output_root": next_root,
+        "finished_trial_count": finished_trial_count,
+    }
+
+
+def _discover_search_root_sequence(base_output_root: Path) -> SearchRootSequence:
+    match = _PREFIXED_SEQUENCE_PATTERN.fullmatch(base_output_root.name)
+    if match is not None:
+        index_text = match.group("index")
+        return SearchRootSequence(
+            base_output_root=base_output_root,
+            mode="prefixed",
+            suffix=match.group("suffix"),
+            width=len(index_text),
+            base_index=int(index_text),
+        )
+    return SearchRootSequence(
+        base_output_root=base_output_root,
+        mode="appended",
+        suffix="",
+        width=2,
+        base_index=1,
+    )
+
+
+def _replace_search_root(search_config: SearchConfig, search_root: Path, run_index: int) -> SearchConfig:
+    storage_path = _replace_storage_path(
+        search_config.storage.path,
+        from_root=search_config.output_root,
+        to_root=search_root,
+    )
+    return replace(
+        search_config,
+        name=_replace_search_name(search_config.name, run_index),
+        output_root=search_root,
+        storage=replace(search_config.storage, path=storage_path),
+    )
+
+
+def _replace_storage_path(storage_path: Path, from_root: Path, to_root: Path) -> Path:
+    try:
+        relative_path = storage_path.relative_to(from_root)
+    except ValueError:
+        return storage_path
+    return (to_root / relative_path).resolve()
+
+
+def _replace_search_name(base_name: str, run_index: int) -> str:
+    match = _RUN_SUFFIX_PATTERN.fullmatch(base_name)
+    if match is not None:
+        index_width = len(match.group("index"))
+        return f"{match.group('prefix')}{run_index:0{index_width}d}"
+    if run_index == 1:
+        return base_name
+    return f"{base_name}_run{run_index:02d}"
+
+
 def _worker_optimize(
     project_root: str,
     search_config: SearchConfig,
@@ -142,7 +300,7 @@ def _create_or_load_study(search_config: SearchConfig, worker_index: int) -> opt
         study_name=search_config.study_name,
         direction="maximize",
         storage=search_config.storage.build_storage(),
-        sampler=search_config.sampler.build_sampler(worker_index),
+        sampler=search_config.sampler.build_sampler(worker_index, search_config.enabled_parameters),
         load_if_exists=True,
     )
 

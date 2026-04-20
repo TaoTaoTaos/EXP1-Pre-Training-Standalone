@@ -205,6 +205,9 @@ def test_fit_restores_best_theta_alpha_before_reporting(tmp_path, monkeypatch, d
     run_summary = json.loads((tmp_path / "run_summary.json").read_text(encoding="utf-8"))
     assert run_summary["best_epoch"] == 1
     assert run_summary["physics_loss_mode"] == "tc2020_curve"
+    assert run_summary["physics_lambda_curve_grow"] == pytest.approx(1.0)
+    assert run_summary["physics_lambda_curve_decay"] == pytest.approx(0.2)
+    assert run_summary["physics_enable_decay"] is True
     assert run_summary["physics_alpha"] == pytest.approx(
         torch.nn.functional.softplus(best_theta_alpha).item()
     )

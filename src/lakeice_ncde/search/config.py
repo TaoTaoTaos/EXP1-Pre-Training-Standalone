@@ -13,7 +13,7 @@ from lakeice_ncde.config import load_yaml_with_extends
 
 
 SUPPORTED_SCORE_FORMULAS = {"r2_dominant_composite"}
-SUPPORTED_SAMPLERS = {"tpe"}
+SUPPORTED_SAMPLERS = {"grid", "tpe"}
 SUPPORTED_STORAGE_TYPES = {"journal"}
 SUPPORTED_PARAMETER_TYPES = {"int", "float", "categorical", "bool"}
 
@@ -24,13 +24,22 @@ class SearchSamplerConfig:
     seed: int
     constant_liar: bool = False
 
-    def build_sampler(self, worker_index: int = 0) -> optuna.samplers.BaseSampler:
-        if self.name != "tpe":
-            raise ValueError(f"Unsupported sampler '{self.name}'. Supported samplers: {sorted(SUPPORTED_SAMPLERS)}")
-        return optuna.samplers.TPESampler(
-            seed=self.seed + worker_index,
-            constant_liar=self.constant_liar,
-        )
+    def build_sampler(
+        self,
+        worker_index: int = 0,
+        parameters: tuple["SearchParameterSpec", ...] = (),
+    ) -> optuna.samplers.BaseSampler:
+        if self.name == "tpe":
+            return optuna.samplers.TPESampler(
+                seed=self.seed + worker_index,
+                constant_liar=self.constant_liar,
+            )
+        if self.name == "grid":
+            return optuna.samplers.GridSampler(
+                _build_grid_search_space(parameters),
+                seed=self.seed + worker_index,
+            )
+        raise ValueError(f"Unsupported sampler '{self.name}'. Supported samplers: {sorted(SUPPORTED_SAMPLERS)}")
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -267,6 +276,7 @@ def load_search_config(project_root: Path, config_path: str | Path) -> SearchCon
     if not enabled_parameters:
         raise ValueError("search.parameters must include at least one enabled parameter.")
     _validate_parameter_conflicts(enabled_parameters)
+    _validate_sampler_parameters(sampler, execution, enabled_parameters)
 
     return SearchConfig(
         config_path=resolved_config_path,
@@ -377,6 +387,34 @@ def _validate_parameter_conflicts(parameters: list[SearchParameterSpec]) -> None
                     "Enabled search parameters cannot target the same key with overlapping scopes: "
                     f"{parameter.name} ({parameter.key}) and {other.name} ({other.key})"
                 )
+
+
+def _validate_sampler_parameters(
+    sampler: SearchSamplerConfig,
+    execution: SearchExecutionConfig,
+    parameters: list[SearchParameterSpec],
+) -> None:
+    if sampler.name != "grid":
+        return
+    _build_grid_search_space(tuple(parameters))
+
+
+def _build_grid_search_space(parameters: tuple[SearchParameterSpec, ...]) -> dict[str, list[Any]]:
+    search_space: dict[str, list[Any]] = {}
+    for parameter in parameters:
+        if not parameter.enabled:
+            continue
+        if parameter.parameter_type not in {"categorical", "bool"}:
+            raise ValueError(
+                "Grid search requires enabled parameters to use type 'categorical' or 'bool' with explicit choices: "
+                f"{parameter.name} uses type '{parameter.parameter_type}'."
+            )
+        if not parameter.choices:
+            raise ValueError(f"Grid search parameter '{parameter.name}' must define non-empty choices.")
+        search_space[parameter.name] = list(parameter.choices)
+    if not search_space:
+        raise ValueError("Grid search requires at least one enabled parameter.")
+    return search_space
 
 
 def _resolve_repo_path(project_root: Path, path_ref: str | Path) -> Path:

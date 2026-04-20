@@ -20,8 +20,9 @@ from lakeice_ncde.data.load_excel import (
 )
 from lakeice_ncde.data.scaling import apply_feature_scaler, fit_feature_scaler, transform_target
 from lakeice_ncde.data.windowing import _build_single_window
+from lakeice_ncde.evaluation.metrics import compute_regression_metrics
 from lakeice_ncde.evaluation.per_lake_summary import compute_per_lake_metrics
-from lakeice_ncde.evaluation.seasonal_rollout import run_seasonal_rollout
+from lakeice_ncde.evaluation.seasonal_rollout import filter_finite_prediction_pairs, run_seasonal_rollout
 from lakeice_ncde.experiment.registry import append_experiment_registry
 from lakeice_ncde.experiment.tracker import create_run_context
 from lakeice_ncde.models.neural_cde import build_model
@@ -514,11 +515,12 @@ def _promote_seasonal_rollout_as_test(
             seasonal_rollout_artifacts.overlap_predictions_path,
             parse_dates=["sample_datetime"],
         )
+        metric_overlap_df = filter_finite_prediction_pairs(overlap_df)
         rollout_metrics = json.loads(
             seasonal_rollout_artifacts.overlap_metrics_json_path.read_text(encoding="utf-8")
         )
-        overlap_count = int(rollout_metrics.get("count", 0))
-        if overlap_df.empty:
+        overlap_count = int(len(metric_overlap_df))
+        if overlap_df.empty or metric_overlap_df.empty:
             test_row = {
                 "split": "test",
                 "loss": np.nan,
@@ -531,19 +533,23 @@ def _promote_seasonal_rollout_as_test(
             save_dataframe(overlap_df, test_predictions_path)
             save_dataframe(pd.DataFrame(), per_lake_metrics_path)
         else:
-            residuals = overlap_df["y_pred"].to_numpy() - overlap_df["y_true"].to_numpy()
+            metric_values = compute_regression_metrics(
+                metric_overlap_df["y_true"].to_numpy(),
+                metric_overlap_df["y_pred"].to_numpy(),
+            )
+            residuals = metric_overlap_df["y_pred"].to_numpy() - metric_overlap_df["y_true"].to_numpy()
             test_loss = float(np.mean(np.square(residuals)))
             test_row = {
                 "split": "test",
                 "loss": test_loss,
-                "rmse": float(rollout_metrics["rmse"]),
-                "mae": float(rollout_metrics["mae"]),
-                "r2": float(rollout_metrics["r2"]),
-                "bias": float(rollout_metrics["bias"]),
-                "negative_count": float(rollout_metrics["negative_count"]),
+                "rmse": float(metric_values["rmse"]),
+                "mae": float(metric_values["mae"]),
+                "r2": float(metric_values["r2"]),
+                "bias": float(metric_values["bias"]),
+                "negative_count": float(metric_values["negative_count"]),
             }
             save_dataframe(overlap_df, test_predictions_path)
-            save_dataframe(compute_per_lake_metrics(overlap_df), per_lake_metrics_path)
+            save_dataframe(compute_per_lake_metrics(metric_overlap_df), per_lake_metrics_path)
 
     metrics_df = pd.concat([metrics_df, pd.DataFrame([test_row])], ignore_index=True)
     save_dataframe(metrics_df, metrics_path)

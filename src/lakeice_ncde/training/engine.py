@@ -261,7 +261,10 @@ class Trainer:
                 "physics_loss_mode": self.physics_loss_mode,
                 "physics_loss_rule": self.config["train"].get("physics_loss", {}).get("rule"),
                 "physics_lambda_st": self.config["train"].get("physics_loss", {}).get("lambda_st"),
+                "physics_lambda_curve_grow": self.config["train"].get("physics_loss", {}).get("lambda_curve_grow"),
+                "physics_lambda_curve_decay": self.config["train"].get("physics_loss", {}).get("lambda_curve_decay"),
                 "physics_lambda_nn": self.config["train"].get("physics_loss", {}).get("lambda_nn"),
+                "physics_enable_decay": self.config["train"].get("physics_loss", {}).get("enable_decay"),
                 "physics_kappa": None if self.theta_kappa is None else float(torch.nn.functional.softplus(self.theta_kappa).item()),
                 "physics_alpha": None if self.theta_alpha is None else float(torch.nn.functional.softplus(self.theta_alpha).item()),
                 "physics_alpha_decay": (

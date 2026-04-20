@@ -96,6 +96,8 @@ def _create_fake_search_run(plan, experiment_name: str, sequence: int) -> tuple[
         init_kappa=init_kappa,
         grow_temp_threshold=grow_temp_threshold,
     )
+    if plan.sampled_parameters.get("force_nan_r2_all") and experiment_name == "EXP2_transfer_autoreg_stefan":
+        metrics["test_r2"] = float("nan")
 
     save_yaml(
         {
@@ -229,6 +231,7 @@ def _write_search_config(
     tmp_path: Path,
     *,
     config_name: str,
+    search_name: str = "test_search_study",
     output_root_name: str,
     n_trials: int,
     max_parallel_trials: int,
@@ -238,7 +241,7 @@ def _write_search_config(
     save_yaml(
         {
             "search": {
-                "name": "test_search_study",
+                "name": search_name,
                 "base_batch_config": str(PROJECT_ROOT / "configs" / "experiments" / "Run-ALL.yaml"),
                 "output_root": str(tmp_path / output_root_name),
                 "n_trials": n_trials,
@@ -296,18 +299,20 @@ def _default_parameters() -> list[dict]:
 
 
 def test_example_search_config_loads_expected_defaults() -> None:
-    config_path = next((PROJECT_ROOT / "configs" / "search").glob("*.yaml"))
+    config_path = PROJECT_ROOT / "configs" / "search" / "EXP2_B_tc2020_structure_search_v1.yaml"
     config = load_search_config(PROJECT_ROOT, config_path)
 
-    assert config.name == "EXP2_test_r2_search_narrow"
-    assert config.base_batch_config.name == "Run-EXP2.yaml"
-    assert config.n_trials == 10
-    assert config.execution.max_parallel_trials == 4
+    assert config.name == "EXP2_B_tc2020_test_tuned_structure_search_v1_run01"
+    assert config.base_batch_config.name == "Run-EXP2-B-tc2020.yaml"
+    assert config.n_trials == 1
+    assert config.execution.max_parallel_trials == 2
     assert config.sampler.constant_liar is True
-    assert config.objective.experiment_name == "EXP2_transfer_autoreg_stefan"
+    assert config.objective.experiment_name == "EXP2-B-tc2020"
+    assert config.objective.split == "test"
     assert config.objective.metric == "r2"
     assert config.storage.path.name == "study.journal"
-    assert any(parameter.name == "lambda_st_exp2" and parameter.enabled for parameter in config.parameters)
+    assert any(parameter.name == "hidden_channels_exp2b" and parameter.enabled for parameter in config.parameters)
+    assert any(parameter.name == "learning_rate_exp2b" and not parameter.enabled for parameter in config.parameters)
 
 
 def test_search_config_rejects_mixed_all_and_explicit_scope(tmp_path: Path) -> None:
@@ -333,6 +338,64 @@ def test_search_config_rejects_mixed_all_and_explicit_scope(tmp_path: Path) -> N
 
     with pytest.raises(ValueError, match="cannot mix 'all'"):
         load_search_config(PROJECT_ROOT, config_path)
+
+
+def test_grid_search_covers_discrete_parameter_combinations(tmp_path: Path) -> None:
+    config_path = tmp_path / "grid_search.yaml"
+    save_yaml(
+        {
+            "search": {
+                "name": "grid_search_study",
+                "base_batch_config": str(PROJECT_ROOT / "configs" / "experiments" / "Run-ALL.yaml"),
+                "output_root": str(tmp_path / "grid-search-output"),
+                "n_trials": 4,
+                "sampler": {"name": "grid", "seed": 7},
+                "storage": {"type": "journal", "path": "artifacts/study.journal"},
+                "execution": {"max_parallel_trials": 2},
+                "objective": {
+                    "experiment_name": "EXP2_transfer_autoreg_stefan",
+                    "split": "test",
+                    "metric": "r2",
+                    "success_threshold": 0.0,
+                    "score_formula": "r2_dominant_composite",
+                },
+                "parameters": [
+                    {
+                        "name": "hidden_channels_all",
+                        "key": "model.hidden_channels",
+                        "enabled": True,
+                        "scope": ["all"],
+                        "type": "categorical",
+                        "choices": [32, 64],
+                    },
+                    {
+                        "name": "lambda_st_exp2",
+                        "key": "train.physics_loss.lambda_st",
+                        "enabled": True,
+                        "scope": ["EXP2_transfer_autoreg_stefan"],
+                        "type": "categorical",
+                        "choices": [0.01, 0.03],
+                    },
+                ],
+            }
+        },
+        config_path,
+    )
+
+    result = run_search(PROJECT_ROOT, config_path, batch_runner=_stub_batch_runner)
+    parameter_df = load_dataframe(Path(result["search_root"]) / "trial_parameters.csv")
+    pivot = parameter_df.pivot(index="trial_number", columns="parameter_name", values="value")
+
+    combinations = {
+        (int(row["hidden_channels_all"]), float(row["lambda_st_exp2"]))
+        for _, row in pivot.iterrows()
+    }
+    assert combinations == {
+        (32, 0.01),
+        (32, 0.03),
+        (64, 0.01),
+        (64, 0.03),
+    }
 
 
 def test_trial_execution_plan_applies_global_and_exp2_only_overrides_without_mutating_source_configs(tmp_path: Path) -> None:
@@ -435,6 +498,25 @@ def test_run_search_writes_trial_records_and_supports_resume(tmp_path: Path) -> 
     assert (search_root / "trials" / "trial_0004" / "trial_metadata.json").exists()
 
 
+def test_run_search_master_csv_prioritizes_test_metrics_before_parameters(tmp_path: Path) -> None:
+    config_path = _write_search_config(
+        tmp_path,
+        config_name="search_ordering.yaml",
+        output_root_name="ordering-search",
+        n_trials=2,
+        max_parallel_trials=1,
+        parameters=_default_parameters(),
+    )
+
+    result = run_search(PROJECT_ROOT, config_path, batch_runner=_stub_batch_runner)
+    search_root = Path(result["search_root"])
+    master_df = load_dataframe(search_root / "trials_master.csv")
+    columns = master_df.columns.tolist()
+
+    assert columns.index("EXP2_transfer_autoreg_stefan.metrics.test.r2") < columns.index("param.learning_rate_all")
+    assert columns.index("EXP2_transfer_autoreg_stefan.metrics.val.r2") < columns.index("param.hidden_channels_all")
+
+
 def test_run_search_records_failed_trials_in_master_csv(tmp_path: Path) -> None:
     parameters = _default_parameters() + [
         {
@@ -464,3 +546,69 @@ def test_run_search_records_failed_trials_in_master_csv(tmp_path: Path) -> None:
     assert master_df.loc[0, "threshold_met"] in (False, 0)
     assert float(master_df.loc[0, "score"]) == FAILURE_SCORE
     assert "Simulated batch runner failure." in str(master_df.loc[0, "error_message"])
+
+
+def test_run_search_records_invalid_objective_metrics_without_batch_failure(tmp_path: Path) -> None:
+    parameters = _default_parameters() + [
+        {
+            "name": "force_nan_r2_all",
+            "key": "custom.force_nan_r2",
+            "enabled": True,
+            "scope": ["all"],
+            "type": "bool",
+            "choices": [True],
+        }
+    ]
+    config_path = _write_search_config(
+        tmp_path,
+        config_name="search_invalid_metric.yaml",
+        output_root_name="invalid-metric-search",
+        n_trials=1,
+        max_parallel_trials=1,
+        parameters=parameters,
+    )
+
+    result = run_search(PROJECT_ROOT, config_path, batch_runner=_stub_batch_runner)
+    search_root = Path(result["search_root"])
+    master_df = load_dataframe(search_root / "trials_master.csv")
+
+    assert len(master_df) == 1
+    assert master_df.loc[0, "trial_status"] == "invalid_metrics"
+    assert master_df.loc[0, "threshold_met"] in (False, 0)
+    assert float(master_df.loc[0, "score"]) == FAILURE_SCORE
+    assert "Objective metric 'metrics.test.r2' is not finite" in str(master_df.loc[0, "error_message"])
+
+
+def test_run_search_completed_study_auto_creates_next_sequential_root(tmp_path: Path) -> None:
+    config_path = _write_search_config(
+        tmp_path,
+        config_name="search_sequence.yaml",
+        search_name="sequence_search_run01",
+        output_root_name="01_sequence-search",
+        n_trials=1,
+        max_parallel_trials=1,
+        parameters=_default_parameters(),
+    )
+
+    first_result = run_search(PROJECT_ROOT, config_path, batch_runner=_stub_batch_runner)
+    second_result = run_search(PROJECT_ROOT, config_path, batch_runner=_stub_batch_runner)
+    third_result = run_search(PROJECT_ROOT, config_path, batch_runner=_stub_batch_runner)
+
+    first_root = Path(first_result["search_root"])
+    second_root = Path(second_result["search_root"])
+    third_root = Path(third_result["search_root"])
+
+    assert first_root.name == "01_sequence-search"
+    assert second_root.name == "02_sequence-search"
+    assert third_root.name == "03_sequence-search"
+    assert first_root != second_root != third_root
+
+    resolved_second = load_search_config(PROJECT_ROOT, second_root / "search_config_resolved.yaml")
+    resolved_third = load_search_config(PROJECT_ROOT, third_root / "search_config_resolved.yaml")
+
+    assert resolved_second.name == "sequence_search_run02"
+    assert resolved_third.name == "sequence_search_run03"
+    assert resolved_second.output_root == second_root.resolve()
+    assert resolved_third.output_root == third_root.resolve()
+    assert (second_root / "artifacts" / "study.journal").exists()
+    assert (third_root / "artifacts" / "study.journal").exists()

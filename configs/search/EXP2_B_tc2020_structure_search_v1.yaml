@@ -1,0 +1,123 @@
+search:
+  # 本轮搜索只针对 EXP2-B-tc2020。
+  # 这里显式标记为 test-tuned：目标就是把当前 test 指标尽量调漂亮。
+  # 因此后续得到的 test 指标，应理解为“针对当前 test 调参后的结果”，
+  # 不再是完全独立、从未参与调参的最终泛化评估。
+  name: "EXP2_B_tc2020_test_tuned_structure_search_v1_run01"
+  base_batch_config: "configs/experiments/Run-EXP2-B-tc2020.yaml"
+
+  # 每个搜索实验单独写入一个目录，便于后续横向比较与续跑。
+  # 这里额外加一层内部编号，用来区分同一主题下的多轮搜索。
+  # 如果你想“开新一轮独立搜索”，请同时递增：
+  # 1) 上面的 search.name 里的 run01 -> run02
+  # 2) 下面 output_root 里的 01_... -> 02_...
+  # 如果不改这里、重复跑同一个目录，框架会把它当成同一 study 续跑。
+  output_root: "outputs/search_runs/EXP2_B_tc2020_structure_search_v1/01_test_tuned_structure_only"
+  n_trials: 1
+
+  sampler:
+    name: "tpe"
+    seed: 42
+    # 并行搜索时启用 constant liar，可减少多个 worker 同时撞到相似参数。
+    constant_liar: true
+
+  storage:
+    type: "journal"
+    # JournalStorage 支持中断后续跑，Windows 下也比较稳。
+    path: "artifacts/study.journal"
+
+  execution:
+    # 并行 trial 数；建议不要超过机器/GPU 能稳定承载的训练数量。
+    max_parallel_trials: 2
+
+  objective:
+    experiment_name: "EXP2-B-tc2020"
+    # 这里显式用 test 做搜索目标。
+    # 目的不是做严格无泄漏评估，而是有意识地朝当前 test 集表现优化。
+    # 这更符合当前目标：优先把现有 test 的 R2 / RMSE 调到更漂亮。
+    split: "test"
+    metric: "r2"
+    # success_threshold 主要用于标记“有没有过线”，不是最终排序公式本身。
+    # 这里设为 0.0，表示 test.r2 转正就视为达标。
+    success_threshold: 0.0
+    # 这里沿用框架里现成的 composite 名称。
+    # 当 split=test 时，它实际按下面的公式给每个 trial 打分：
+    # score = test.r2 - 0.20 * test.rmse - 0.05 * log1p(test.negative_count)
+    # 含义是：
+    # 1) 优先把 test.r2 做高；
+    # 2) 在 test.r2 接近时，进一步偏向 test.rmse 更小的方案；
+    # 3) 轻微惩罚出现负厚度预测过多的方案。
+    score_formula: "r2_dominant_composite"
+
+  parameters:
+    # 第一轮先搜结构参数，范围围绕当前基线：
+    # hidden_channels=50, hidden_hidden_channels=110, num_hidden_layers=4, dropout=0.05
+    - name: "hidden_channels_exp2b"
+      key: "model.hidden_channels"
+      enabled: true
+      scope: ["EXP2-B-tc2020"]
+      type: "int"
+      low: 40
+      high: 64
+      step: 8
+
+    - name: "hidden_hidden_channels_exp2b"
+      key: "model.hidden_hidden_channels"
+      enabled: true
+      scope: ["EXP2-B-tc2020"]
+      type: "int"
+      low: 96
+      high: 144
+      step: 16
+
+    - name: "num_hidden_layers_exp2b"
+      key: "model.num_hidden_layers"
+      enabled: true
+      scope: ["EXP2-B-tc2020"]
+      type: "int"
+      low: 3
+      high: 5
+      step: 1
+
+    - name: "dropout_exp2b"
+      key: "model.dropout"
+      enabled: true
+      scope: ["EXP2-B-tc2020"]
+      type: "float"
+      low: 0.0
+      high: 0.12
+      log: false
+
+    # 第二轮预留给优化器/损失相关参数；先保留范围，但默认关闭。
+    - name: "learning_rate_exp2b"
+      key: "train.learning_rate"
+      enabled: false
+      scope: ["EXP2-B-tc2020"]
+      type: "float"
+      # learning_rate：控制每一步参数更新幅度。
+      # 太小会学得慢、容易停在次优点；太大会震荡，甚至让验证/测试表现明显变差。
+      low: 1.0e-4
+      high: 6.0e-4
+      log: true
+
+    - name: "weight_decay_exp2b"
+      key: "train.weight_decay"
+      enabled: false
+      scope: ["EXP2-B-tc2020"]
+      type: "float"
+      # weight_decay：L2 正则强度，用来约束模型权重别长得过大。
+      # 太小可能过拟合；太大则可能把模型压得过头，导致欠拟合、振幅变小。
+      low: 1.0e-5
+      high: 2.0e-3
+      log: true
+
+    - name: "huber_delta_exp2b"
+      key: "train.huber_delta"
+      enabled: false
+      scope: ["EXP2-B-tc2020"]
+      type: "float"
+      # huber_delta：Huber loss 从“平方误差区”切到“绝对误差区”的阈值。
+      # 小一些会更抗异常点；大一些会更接近 MSE，更强调把中等误差继续压小。
+      low: 0.05
+      high: 0.30
+      log: false

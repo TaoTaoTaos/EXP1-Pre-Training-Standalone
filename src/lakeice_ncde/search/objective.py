@@ -26,6 +26,10 @@ EXPERIMENT_PATH_ALIASES = {
 }
 
 
+class InvalidObjectiveMetricError(ValueError):
+    """Raised when a completed run produced unusable objective metrics."""
+
+
 @dataclass(frozen=True)
 class TrialExecutionPlan:
     trial_number: int
@@ -119,6 +123,16 @@ class SearchObjective:
                 trial.number,
                 score,
                 threshold_met,
+            )
+        except InvalidObjectiveMetricError as exc:
+            trial_status = "invalid_metrics"
+            threshold_met = False
+            score = FAILURE_SCORE
+            error_message = str(exc)
+            logger.warning(
+                "Search trial %d produced invalid objective metrics and will receive the failure score: %s",
+                trial.number,
+                error_message,
             )
         except Exception as exc:  # noqa: BLE001
             trial_status = "failed"
@@ -377,6 +391,6 @@ def _require_metric(records: dict[str, Any], split: str, metric_name: str) -> fl
     if key not in records:
         raise KeyError(f"Objective metric '{key}' is missing from trial records.")
     value = float(records[key])
-    if math.isnan(value):
-        raise ValueError(f"Objective metric '{key}' is NaN.")
+    if not math.isfinite(value):
+        raise InvalidObjectiveMetricError(f"Objective metric '{key}' is not finite: {value}.")
     return value

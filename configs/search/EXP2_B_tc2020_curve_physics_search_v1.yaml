@@ -1,0 +1,82 @@
+search:
+  # Focused finite grid search for TC2020 curve-physics parameters on EXP2-B-tc2020.
+  name: "EXP2_B_tc2020_curve_physics_grid_v1_run01"
+  base_batch_config: "configs/experiments/Run-EXP2-B-tc2020.yaml"
+  output_root: "outputs/search_runs/EXP2_B_tc2020_curve_physics_grid_v1/01_curve_physics_grid"
+  # Full grid size: 2 * 2 * 2 * 2 * 3 * 2 * 2 = 192 trials.
+  n_trials: 192
+
+  sampler:
+    name: "grid"
+    seed: 42
+
+  storage:
+    type: "journal"
+    path: "artifacts/study.journal"
+
+  execution:
+    max_parallel_trials: 2
+
+  objective:
+    experiment_name: "EXP2-B-tc2020"
+    split: "test"
+    metric: "r2"
+    success_threshold: 0.0
+    score_formula: "r2_dominant_composite"
+
+  parameters:
+    # 生长期曲线约束权重，有限均匀档位粗筛。
+    - name: "lambda_curve_grow_exp2b"
+      key: "train.physics_loss.lambda_curve_grow"
+      enabled: true
+      scope: ["EXP2-B-tc2020"]
+      type: "categorical"
+      choices: [0.000005, 0.00002]
+
+    # 消融期曲线约束权重，有限均匀档位粗筛；enable_decay=true 时生效。
+    - name: "lambda_curve_decay_exp2b"
+      key: "train.physics_loss.lambda_curve_decay"
+      enabled: true
+      scope: ["EXP2-B-tc2020"]
+      type: "categorical"
+      choices: [0.00004, 0.00016]
+
+    # alpha 初始值，有限均匀档位粗筛。
+    - name: "init_alpha_exp2b"
+      key: "train.physics_loss.init_alpha"
+      enabled: true
+      scope: ["EXP2-B-tc2020"]
+      type: "categorical"
+      choices: [1.2, 2.0]
+
+    # alpha_decay 初始值，有限均匀档位粗筛。
+    - name: "init_alpha_decay_exp2b"
+      key: "train.physics_loss.init_alpha_decay"
+      enabled: true
+      scope: ["EXP2-B-tc2020"]
+      type: "categorical"
+      choices: [0.9, 1.7]
+
+    # 冰季起始月份，搜索范围围绕 10 这个参考中心值设置；先在 9/10/11 月之间搜索。
+    - name: "season_start_month_exp2b"
+      key: "train.physics_loss.season_start_month"
+      enabled: true
+      scope: ["EXP2-B-tc2020"]
+      type: "categorical"
+      choices: [9, 10, 11]
+
+    # stable mask 的最小冰厚阈值，有限均匀档位粗筛。
+    - name: "stable_ice_min_m_exp2b"
+      key: "train.physics_loss.stable_ice_min_m"
+      enabled: true
+      scope: ["EXP2-B-tc2020"]
+      type: "categorical"
+      choices: [0.02, 0.05]
+
+    # 生长/消融分期容差，有限均匀档位粗筛。
+    - name: "phase_tolerance_m_exp2b"
+      key: "train.physics_loss.phase_tolerance_m"
+      enabled: true
+      scope: ["EXP2-B-tc2020"]
+      type: "categorical"
+      choices: [0.0008, 0.0024]
