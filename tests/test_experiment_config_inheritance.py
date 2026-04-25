@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from lakeice_ncde.config import load_config
+from lakeice_ncde.data.load_excel import resolve_required_physics_columns
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -70,6 +71,36 @@ def test_exp2_b_tc2020_inherits_transfer_setup_and_switches_mode() -> None:
     ):
         assert field_name in physics_cfg
     assert config["paths"]["prepared_csv"].endswith("prepared_data_EXP2-B-tc2020.csv")
+
+
+def test_exp2_b_tc2020_plus_extends_curve_with_stefan_growth_only() -> None:
+    config = _load_experiment_config("EXP2-B-tc2020-PLUS.yaml")
+    physics_cfg = config["train"]["physics_loss"]
+    required_physics_columns = resolve_required_physics_columns(config)
+
+    assert config["experiment"]["name"] == "EXP2-B-tc2020-PLUS"
+    assert config["custom_split"]["target_lake_test_start"] == "2026-01-01"
+    assert physics_cfg["enabled"] is True
+    assert physics_cfg["mode"] == "tc2020_curve"
+    assert physics_cfg["enable_stefan_grow"] is True
+    assert physics_cfg["lambda_st"] == 0.01
+    assert physics_cfg["min_prev_ice_m"] == 0.05
+    assert physics_cfg["grow_temp_threshold_celsius"] == -0.5
+    assert physics_cfg["enable_rollout_stability"] is True
+    assert physics_cfg["lambda_rollout_stability"] == 0.05
+    for field_name in (
+        "afdd",
+        "atdd",
+        "is_growth_phase",
+        "is_decay_phase",
+        "stable_ice_mask",
+        "ice_prev_m",
+        "ice_prev_gap_days",
+        "Air_Temperature_celsius",
+        "ice_prev_available",
+    ):
+        assert field_name in required_physics_columns
+    assert config["paths"]["prepared_csv"].endswith("prepared_data_EXP2-B-tc2020-PLUS.csv")
 
 
 def test_old_aliases_resolve_to_new_experiment_names() -> None:

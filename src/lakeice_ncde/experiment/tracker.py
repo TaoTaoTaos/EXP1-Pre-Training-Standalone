@@ -3,7 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from lakeice_ncde.config import save_yaml
+from lakeice_ncde.utils.io import save_yaml
+from lakeice_ncde.utils.locking import PathLock
 from lakeice_ncde.utils.paths import build_sequential_run_name
 
 
@@ -21,13 +22,16 @@ class RunContext:
 def create_run_context(output_root: Path, experiment_name: str, config: dict) -> RunContext:
     """Create the run directory structure and save the merged config."""
     experiment_root = output_root / experiment_name
-    run_name = build_sequential_run_name(experiment_root, experiment_name)
-    run_dir = experiment_root / run_name
-    artifacts_dir = run_dir / "artifacts"
-    artifacts_dir.mkdir(parents=True, exist_ok=True)
-    log_path = run_dir / "run.log"
-    config_path = run_dir / "config_merged.yaml"
-    save_yaml(config, config_path)
+    experiment_root.mkdir(parents=True, exist_ok=True)
+    lock_path = experiment_root / ".run_context.lock"
+    with PathLock(lock_path):
+        run_name = build_sequential_run_name(experiment_root, experiment_name)
+        run_dir = experiment_root / run_name
+        artifacts_dir = run_dir / "artifacts"
+        artifacts_dir.mkdir(parents=True, exist_ok=False)
+        log_path = run_dir / "run.log"
+        config_path = run_dir / "config_merged.yaml"
+        save_yaml(config, config_path)
     return RunContext(
         run_name=run_name,
         run_dir=run_dir,

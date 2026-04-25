@@ -288,7 +288,7 @@ def _build_physics_pairs(
         ("train.physics_loss.lambda_nn", str(physics_cfg.get("lambda_nn", "n/a"))),
     ]
     if mode == "tc2020_curve":
-        return common_pairs + [
+        tc2020_pairs = common_pairs + [
             ("train.physics_loss.lambda_curve_grow", str(physics_cfg.get("lambda_curve_grow", "n/a"))),
             ("run_summary.physics_lambda_curve_grow", str(run_summary.get("physics_lambda_curve_grow", "n/a"))),
             ("train.physics_loss.lambda_curve_decay", str(physics_cfg.get("lambda_curve_decay", "n/a"))),
@@ -309,6 +309,31 @@ def _build_physics_pairs(
             ("train.physics_loss.stable_ice_min_m", str(physics_cfg.get("stable_ice_min_m", "n/a"))),
             ("train.physics_loss.phase_tolerance_m", str(physics_cfg.get("phase_tolerance_m", "n/a"))),
         ]
+        if bool(physics_cfg.get("enable_stefan_grow", False)):
+            # TC2020-PLUS 才展示 Stefan 增量项相关超参数，普通 tc2020_curve 报告保持原样。
+            tc2020_pairs.extend(
+                [
+                    ("train.physics_loss.enable_stefan_grow", str(physics_cfg.get("enable_stefan_grow", "n/a"))),
+                    ("run_summary.physics_enable_stefan_grow", str(run_summary.get("physics_enable_stefan_grow", "n/a"))),
+                    ("train.physics_loss.lambda_st", str(physics_cfg.get("lambda_st", "n/a"))),
+                    ("run_summary.physics_lambda_st", str(run_summary.get("physics_lambda_st", "n/a"))),
+                    ("train.physics_loss.enable_rollout_stability", str(physics_cfg.get("enable_rollout_stability", "n/a"))),
+                    ("run_summary.physics_enable_rollout_stability", str(run_summary.get("physics_enable_rollout_stability", "n/a"))),
+                    ("train.physics_loss.lambda_rollout_stability", str(physics_cfg.get("lambda_rollout_stability", "n/a"))),
+                    ("run_summary.physics_lambda_rollout_stability", str(run_summary.get("physics_lambda_rollout_stability", "n/a"))),
+                    ("train.physics_loss.init_kappa", str(physics_cfg.get("init_kappa", "n/a"))),
+                    ("run_summary.physics_kappa", str(run_summary.get("physics_kappa", "n/a"))),
+                    ("train.physics_loss.min_prev_ice_m", str(physics_cfg.get("min_prev_ice_m", "n/a"))),
+                    (
+                        "train.physics_loss.grow_temp_threshold_celsius",
+                        str(physics_cfg.get("grow_temp_threshold_celsius", "n/a")),
+                    ),
+                    ("train.physics_loss.prev_ice_column", str(physics_cfg.get("prev_ice_column", "n/a"))),
+                    ("train.physics_loss.gap_days_column", str(physics_cfg.get("gap_days_column", "n/a"))),
+                    ("train.physics_loss.prev_available_column", str(physics_cfg.get("prev_available_column", "n/a"))),
+                ]
+            )
+        return tc2020_pairs
     return common_pairs + [
         ("train.physics_loss.rule", str(physics_cfg.get("rule", "none"))),
         ("train.physics_loss.lambda_st", str(physics_cfg.get("lambda_st", "n/a"))),

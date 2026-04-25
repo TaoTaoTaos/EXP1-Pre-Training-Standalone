@@ -1,0 +1,43 @@
+extends: "EXP2-B-tc2020.yaml"
+
+experiment:
+  name: "EXP2-B-tc2020-PLUS"
+  description: "Experiment 2-B PLUS: tc2020_curve physics loss plus a growth-only Stefan incremental constraint."
+
+paths:
+  prepared_csv: "data/interim/prepared_data_EXP2-B-tc2020-PLUS.csv"
+  validation_report_json: "data/artifacts/EXP2-B-tc2020-PLUS_validation_report.json"
+  feature_schema_json: "data/artifacts/EXP2-B-tc2020-PLUS_feature_schema.json"
+  split_root: "data/splits_EXP2-B-tc2020-PLUS"
+  window_root: "data/windows_EXP2-B-tc2020-PLUS"
+  coeff_root: "data/coeffs_EXP2-B-tc2020-PLUS"
+  artifact_root: "data/artifacts/EXP2-B-tc2020-PLUS"
+
+split:
+  name: "EXP2-B-tc2020-PLUS_reference"
+
+train:
+  physics_loss:
+    # PLUS 支线开关：只在本配置中启用 Stefan 增量增长项，原 EXP2-B-tc2020 主流程保持纯曲线约束。
+    enable_stefan_grow: true
+    # Stefan 增量项权重：total = curve_grow + curve_decay + lambda_st * stefan_grow + nonneg。
+    lambda_st: 0.0005
+    # kappa 的正空间初值；训练时实际优化 theta_kappa，并通过 softplus(theta_kappa) 保证 kappa > 0。
+    init_kappa: 0.0009
+    # 只在上一观测冰厚足够稳定时启用 Stefan 增量项，避免初生薄冰阶段的平方差约束过强。
+    min_prev_ice_m: 0.05
+    # 只在低于该气温阈值的增长样本上启用，当前默认要求明显低于冰点。
+    grow_temp_threshold_celsius: -0.5
+    # 以下列名用于把上一观测冰厚、观测间隔和可用性写入 physics_context。
+    prev_ice_column: "ice_prev_m"
+    gap_days_column: "ice_prev_gap_days"
+    prev_available_column: "ice_prev_available"
+    # 闭环稳定项：训练时把当前预测写入下一条连续观测窗口的 ice_prev_m，
+    # 再监督下一条真实冰厚，用来缩小 teacher forcing 与 seasonal rollout 的输入分布差距。
+    enable_rollout_stability: true
+    # 稳定项权重保持保守，先让模型学会闭环输入下不发散，再由主监督和曲线项决定拟合细节。
+    lambda_rollout_stability: 1.1
+    # 稳定项使用 Huber，避免早期 one-step 闭环预测很大时梯度过猛。
+    rollout_stability_huber_beta: 0.1
+    # 默认不让下一步稳定项的梯度反穿回“当前预测作为输入”的那条路径，训练更稳。
+    rollout_stability_detach_prev_prediction: true

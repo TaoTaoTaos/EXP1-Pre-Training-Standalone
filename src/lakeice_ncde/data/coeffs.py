@@ -5,6 +5,7 @@ from typing import Any
 
 import pandas as pd
 import torch
+import yaml
 
 from lakeice_ncde.utils.io import save_dataframe, save_torch, save_yaml
 
@@ -23,6 +24,10 @@ def compute_coefficients_for_windows(bundle_path: Path, interpolation: str, logg
     """Load windows and compute interpolation coefficients one sample at a time."""
     torchcde = _require_torchcde()
     bundle = torch.load(bundle_path, map_location="cpu", weights_only=False)
+    scaler_path = bundle_path.parent / "feature_scaler.yaml"
+    if scaler_path.exists() and "feature_scaler" not in bundle:
+        with scaler_path.open("r", encoding="utf-8") as handle:
+            bundle["feature_scaler"] = yaml.safe_load(handle) or {}
     coeffs_list: list[Any] = []
     coeff_shapes: list[str] = []
     total_windows = len(bundle["windows"])

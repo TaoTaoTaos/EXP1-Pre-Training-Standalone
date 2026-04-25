@@ -165,18 +165,35 @@ def resolve_required_physics_columns(config: dict) -> dict[str, str]:
         }
     if mode == "tc2020_curve":
         tc2020_cfg = resolve_tc2020_curve_preprocessing_config(config)
-        return {
+        required_columns = {
             "afdd": str(tc2020_cfg["afdd_column"]),
             "atdd": str(tc2020_cfg["atdd_column"]),
             "is_growth_phase": str(tc2020_cfg["growth_phase_column"]),
             "is_decay_phase": str(tc2020_cfg["decay_phase_column"]),
             "stable_ice_mask": str(tc2020_cfg["stable_ice_mask_column"]),
         }
+        if bool(physics_cfg.get("enable_stefan_grow", False)):
+            # TC2020-PLUS 的 Stefan 增量项还需要上一观测冰厚、间隔天数、
+            # 当前气温和上一观测是否存在。只在 PLUS 开关打开时加入这些字段，
+            # 避免原 tc2020_curve 缓存与训练上下文被无关字段污染。
+            required_columns.update(
+                {
+                    "ice_prev_m": str(physics_cfg.get("prev_ice_column", "ice_prev_m")),
+                    "ice_prev_gap_days": str(
+                        physics_cfg.get("gap_days_column", "ice_prev_gap_days")
+                    ),
+                    "Air_Temperature_celsius": str(tc2020_cfg["temperature_column"]),
+                    "ice_prev_available": str(
+                        physics_cfg.get("prev_available_column", "ice_prev_available")
+                    ),
+                }
+            )
+        return required_columns
     raise ValueError(f"Unsupported physics loss mode: {mode}")
 
 
 def _add_tc2020_curve_features(df: pd.DataFrame, config: dict) -> pd.DataFrame:
-    physics_cfg = config["train"].get("physics_loss", {})
+    physics_cfg = config.get("train", {}).get("physics_loss", {})
     if str(physics_cfg.get("mode", "legacy_stefan")) != "tc2020_curve":
         return df
 

@@ -1,0 +1,11 @@
+experiment:
+  name: "Run-EXP2-B-tc2020-PLUS"
+  description: "Batch runner for EXP2-B-tc2020-PLUS during coarse physics-parameter search."
+
+paths:
+  output_root: "outputs/runs"
+
+batch:
+  max_workers: 1
+  experiments:
+    - config: "EXP2-B-tc2020-PLUS.yaml"

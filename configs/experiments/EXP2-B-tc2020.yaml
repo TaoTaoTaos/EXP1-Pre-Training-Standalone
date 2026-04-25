@@ -47,7 +47,7 @@ train:
     # 稳定冰盖掩码列名；避免在薄冰、跳点或无冰阶段施加不稳定曲线约束。
     stable_ice_mask_column: "stable_ice_mask"
     # 冰季起始月份；AFDD/ATDD 会从每年该月份开始重新累计。
-    season_start_month: 10
+    season_start_month: 11
     # stable mask 的最小冰厚阈值，只有前后观测都不小于该值才视为稳定冰段。
     stable_ice_min_m: 0.03
     # 生长/消融分期的容差，避免把接近 0 的厚度变化误判成阶段切换。

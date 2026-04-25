@@ -17,6 +17,8 @@ class PhysicsLossBreakdown:
 
     # Stefan 风格增长约束项，刻画预测冰厚是否符合平方厚度增长关系。
     stefan: torch.Tensor
+    # TC2020-PLUS 增长期 Stefan 增量项，专门约束“今天该增长多少”的热力学残差。
+    stefan_grow: torch.Tensor
     # TC2020 曲线在生长期上的约束项。
     curve_grow: torch.Tensor
     # TC2020 曲线在消融期上的约束项。
@@ -92,6 +94,7 @@ def compute_physics_loss(
         # 没开启物理损失时，返回全 0，占位但不影响主损失流程。
         return PhysicsLossBreakdown(
             stefan=zero,
+            stefan_grow=zero,
             curve_grow=zero,
             curve_decay=zero,
             nonneg=zero,
@@ -119,6 +122,7 @@ def compute_physics_loss(
             physics_context=physics_context,
             physics_cfg=physics_cfg,
             target_transform=target_transform,
+            theta_kappa=theta_kappa,
             theta_alpha=theta_alpha,
             theta_alpha_decay=theta_alpha_decay,
         )
@@ -201,6 +205,7 @@ def _compute_legacy_stefan_loss(
     )
     return PhysicsLossBreakdown(
         stefan=loss_stefan,
+        stefan_grow=loss_stefan,
         curve_grow=predictions_transformed.new_zeros(()),
         curve_decay=predictions_transformed.new_zeros(()),
         nonneg=loss_nonneg,
@@ -217,6 +222,7 @@ def _compute_tc2020_curve_loss(
     physics_context: dict[str, torch.Tensor],
     physics_cfg: dict,
     target_transform: str,
+    theta_kappa: torch.Tensor | None,
     theta_alpha: torch.Tensor | None,
     theta_alpha_decay: torch.Tensor | None,
 ) -> PhysicsLossBreakdown:
@@ -231,6 +237,7 @@ def _compute_tc2020_curve_loss(
     )
     lambda_nn = float(_require_physics_config_value(physics_cfg, "lambda_nn"))
     enable_decay = bool(_require_physics_config_value(physics_cfg, "enable_decay"))
+    enable_stefan_grow = bool(physics_cfg.get("enable_stefan_grow", False))
 
     pred_ice = inverse_transform_target_tensor(
         predictions_transformed, target_transform
@@ -266,21 +273,69 @@ def _compute_tc2020_curve_loss(
 
     loss_curve_grow = _masked_mean((pred_ice - h_curve).pow(2), grow_mask)
     loss_curve_decay = _masked_mean((pred_ice - h_curve).pow(2), decay_mask)
+    zero = predictions_transformed.new_zeros(())
+
+    if enable_stefan_grow:
+        if theta_kappa is None:
+            raise ValueError(
+                "Physics loss mode 'tc2020_curve' with enable_stefan_grow=true requires theta_kappa to be initialized."
+            )
+
+        # TC2020-PLUS 只在增长期额外启用 Stefan 增量项：
+        # 这里沿用已有的 grow_mask，再叠加上一时刻冰厚、时间间隔和低温条件，避免在融化期、
+        # 初生薄冰或缺少历史观测的样本上强行施加“今天该长多少”的热力学关系。
+        prev_ice = _get_physics_field(physics_context, "ice_prev_m", pred_ice.device)
+        gap_days = _get_physics_field(
+            physics_context, "ice_prev_gap_days", pred_ice.device
+        )
+        temp_c = _get_physics_field(
+            physics_context, "Air_Temperature_celsius", pred_ice.device
+        )
+        prev_ok = (
+            _get_physics_field(
+                physics_context, "ice_prev_available", pred_ice.device
+            )
+            > 0.5
+        )
+        min_prev_ice_m = float(physics_cfg.get("min_prev_ice_m", 0.05))
+        grow_temp_threshold_celsius = float(
+            physics_cfg.get("grow_temp_threshold_celsius", -0.5)
+        )
+        stefan_mask = (
+            grow_mask
+            & prev_ok
+            & (prev_ice > min_prev_ice_m)
+            & (temp_c < grow_temp_threshold_celsius)
+        )
+
+        # 冻结驱动量 delta_F = relu(-temp_c) * gap_days。
+        # 气温越低、距离上一观测越久，理论上可支持的平方冰厚增量越大。
+        delta_F = torch.relu(-temp_c) * gap_days
+        # kappa 仍用无约束参数 theta_kappa 训练，再通过 softplus 映射到正数，
+        # 保证 Stefan 系数在优化过程中始终有物理意义。
+        kappa = F.softplus(theta_kappa)
+        stefan_residual = (pred_ice.square() - prev_ice.square()) - kappa * delta_F
+        loss_stefan_grow = _masked_mean(stefan_residual.square(), stefan_mask)
+    else:
+        kappa = zero
+        loss_stefan_grow = zero
 
     # 非负项保持与现有实现一致，避免新模式改动主监督外的基础约束行为。
     loss_nonneg = torch.relu(-pred_ice).square().mean()
     total = (
         lambda_curve_grow * loss_curve_grow
         + lambda_curve_decay * loss_curve_decay
+        + float(physics_cfg.get("lambda_st", 0.0)) * loss_stefan_grow
         + lambda_nn * loss_nonneg
     )
     return PhysicsLossBreakdown(
-        stefan=predictions_transformed.new_zeros(()),
+        stefan=loss_stefan_grow,
+        stefan_grow=loss_stefan_grow,
         curve_grow=loss_curve_grow,
         curve_decay=loss_curve_decay,
         nonneg=loss_nonneg,
         total=total,
-        kappa=predictions_transformed.new_zeros(()),
+        kappa=kappa,
         alpha=alpha,
         alpha_decay=alpha_decay,
     )

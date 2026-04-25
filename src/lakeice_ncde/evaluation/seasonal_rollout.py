@@ -295,6 +295,7 @@ def run_autoregressive_rollout(
 
     target_lake = str(rollout_state_df[lake_column].iloc[0])
     start_time = pd.Timestamp(rollout_state_df[time_column].min())
+    rollout_cfg = config.get("seasonal_rollout", {})
     previous_ice, previous_time = _resolve_rollout_initial_state(
         prepared_df=prepared_df,
         lake_column=lake_column,
@@ -302,6 +303,7 @@ def run_autoregressive_rollout(
         time_column=time_column,
         target_lake=target_lake,
         start_time=start_time,
+        reset_from_month=rollout_cfg.get("reset_initial_state_from_month"),
     )
 
     windows: list[torch.Tensor] = []
@@ -340,6 +342,13 @@ def run_autoregressive_rollout(
             pred_transformed = _predict_single_coeff(model, coeff, device)
             pred_value = float(inverse_transform_target(np.array([pred_transformed], dtype=np.float32), target_transform)[0])
             pred_value = max(pred_value, 0.0)
+            pred_value = _apply_open_water_projection(
+                pred_value=pred_value,
+                previous_ice=previous_ice,
+                anchor_row=rollout_state_df.iloc[anchor_index],
+                anchor_time=anchor_time,
+                rollout_cfg=rollout_cfg,
+            )
 
             target_value = rollout_state_df.at[anchor_index, target_column]
             metadata_row = {
@@ -405,7 +414,17 @@ def _resolve_rollout_initial_state(
     time_column: str,
     target_lake: str,
     start_time: pd.Timestamp,
+    reset_from_month: int | None = None,
 ) -> tuple[float | None, pd.Timestamp | None]:
+    if reset_from_month is not None:
+        reset_month = int(reset_from_month)
+        if reset_month < 1 or reset_month > 12:
+            raise ValueError(
+                "seasonal_rollout.reset_initial_state_from_month must be between 1 and 12."
+            )
+        if start_time.month >= reset_month:
+            return 0.0, start_time
+
     observed_df = prepared_df.loc[prepared_df[lake_column].astype(str) == target_lake].copy()
     observed_df[time_column] = pd.to_datetime(observed_df[time_column])
     history_df = observed_df.loc[observed_df[time_column] < start_time].sort_values(time_column)
@@ -413,6 +432,41 @@ def _resolve_rollout_initial_state(
         return None, None
     last_row = history_df.iloc[-1]
     return float(last_row[target_column]), pd.Timestamp(last_row[time_column])
+
+
+def _apply_open_water_projection(
+    *,
+    pred_value: float,
+    previous_ice: float | None,
+    anchor_row: pd.Series,
+    anchor_time: pd.Timestamp,
+    rollout_cfg: dict[str, Any],
+) -> float:
+    if not bool(rollout_cfg.get("open_water_projection_enabled", False)):
+        return pred_value
+
+    reset_from_month = rollout_cfg.get("reset_initial_state_from_month")
+    if reset_from_month is not None and anchor_time.month < int(reset_from_month):
+        return pred_value
+
+    temperature_column = str(
+        rollout_cfg.get("open_water_temperature_column", "Air_Temperature_celsius")
+    )
+    if temperature_column not in anchor_row:
+        return pred_value
+
+    temp_c = pd.to_numeric(anchor_row[temperature_column], errors="coerce")
+    if pd.isna(temp_c):
+        return pred_value
+
+    temp_threshold = float(
+        rollout_cfg.get("open_water_temperature_threshold_celsius", 0.0)
+    )
+    prev_ice_threshold = float(rollout_cfg.get("open_water_prev_ice_max_m", 0.05))
+    previous_is_open_water = previous_ice is None or float(previous_ice) <= prev_ice_threshold
+    if previous_is_open_water and float(temp_c) > temp_threshold:
+        return 0.0
+    return pred_value
 
 
 def _compute_single_window_coefficients(window: torch.Tensor, interpolation: str) -> Any:

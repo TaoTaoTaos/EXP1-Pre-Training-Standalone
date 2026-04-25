@@ -69,6 +69,11 @@ seasonal_rollout:
   test_start_datetime: "2025-09-12 12:00:00"
   end_datetime: "2026-04-12 12:00:00"
   daily_hour: 12
+  reset_initial_state_from_month: 8
+  open_water_projection_enabled: true
+  open_water_temperature_column: "Air_Temperature_celsius"
+  open_water_temperature_threshold_celsius: 0.0
+  open_water_prev_ice_max_m: 0.05
 
 window:
   window_days: 7

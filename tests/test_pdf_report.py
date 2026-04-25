@@ -224,3 +224,51 @@ def test_build_physics_pairs_uses_tc2020_specific_fields() -> None:
     assert physics_pairs["run_summary.physics_alpha"] == "1.5"
     assert "train.physics_loss.lambda_st" not in physics_pairs
     assert "run_summary.physics_kappa" not in physics_pairs
+
+
+def test_build_physics_pairs_includes_tc2020_plus_stefan_fields() -> None:
+    physics_pairs = dict(
+        _build_physics_pairs(
+            {
+                "enabled": True,
+                "mode": "tc2020_curve",
+                "lambda_curve_grow": 1.0e-5,
+                "lambda_curve_decay": 9.0e-6,
+                "lambda_st": 0.01,
+                "lambda_rollout_stability": 0.05,
+                "lambda_nn": 1.0,
+                "enable_decay": True,
+                "enable_stefan_grow": True,
+                "enable_rollout_stability": True,
+                "init_alpha": 1.6,
+                "init_alpha_decay": 1.0,
+                "init_kappa": 0.009,
+                "temperature_column": "Air_Temperature_celsius",
+                "afdd_column": "afdd",
+                "atdd_column": "atdd",
+                "growth_phase_column": "is_growth_phase",
+                "decay_phase_column": "is_decay_phase",
+                "stable_ice_mask_column": "stable_ice_mask",
+                "season_start_month": 11,
+                "stable_ice_min_m": 0.03,
+                "phase_tolerance_m": 0.0012,
+                "min_prev_ice_m": 0.05,
+                "grow_temp_threshold_celsius": -0.5,
+                "prev_ice_column": "ice_prev_m",
+                "gap_days_column": "ice_prev_gap_days",
+                "prev_available_column": "ice_prev_available",
+            },
+            {
+                "physics_lambda_st": 0.01,
+                "physics_enable_stefan_grow": True,
+                "physics_enable_rollout_stability": True,
+                "physics_lambda_rollout_stability": 0.05,
+                "physics_kappa": 0.008,
+            },
+        )
+    )
+
+    assert physics_pairs["train.physics_loss.enable_stefan_grow"] == "True"
+    assert physics_pairs["train.physics_loss.lambda_st"] == "0.01"
+    assert physics_pairs["train.physics_loss.lambda_rollout_stability"] == "0.05"
+    assert physics_pairs["run_summary.physics_kappa"] == "0.008"

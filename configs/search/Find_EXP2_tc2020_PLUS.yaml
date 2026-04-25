@@ -1,0 +1,87 @@
+search:
+  # Broad-range TPE coarse search for EXP2-B-tc2020-PLUS physics/stability parameters.
+  name: "Find_EXP2_tc2020_PLUS_tpe_wide_v1_run01"
+  base_batch_config: "configs/experiments/Run-EXP2-B-tc2020-PLUS.yaml"
+  output_root: "outputs/search_runs/Find_EXP2_tc2020_PLUS/02_tpe_wide"
+  # Coarse search budget: let TPE explore wide ranges first, then narrow later.
+  n_trials: 200
+
+  sampler:
+    name: "tpe"
+    seed: 42
+    constant_liar: true
+
+  storage:
+    type: "journal"
+    path: "artifacts/study.journal"
+
+  execution:
+    max_parallel_trials: 1
+
+  objective:
+    experiment_name: "EXP2-B-tc2020-PLUS"
+    split: "test"
+    metric: "r2"
+    success_threshold: 0.6
+    score_formula: "r2_dominant_composite"
+
+  parameters:
+    # Grow-curve weight: broadened to roughly cover one order around the current default.
+    - name: "lambda_curve_grow_plus"
+      key: "train.physics_loss.lambda_curve_grow"
+      enabled: true
+      scope: ["EXP2-B-tc2020-PLUS"]
+      type: "float"
+      low: 1.0e-6
+      high: 5.0e-5
+      log: true
+
+    # Decay-curve weight: wider than the initial hand-tuned value to let TPE decide balance.
+    - name: "lambda_curve_decay_plus"
+      key: "train.physics_loss.lambda_curve_decay"
+      enabled: true
+      scope: ["EXP2-B-tc2020-PLUS"]
+      type: "float"
+      low: 1.0e-5
+      high: 5.0e-4
+      log: true
+
+    # Stefan growth residual weight: wide positive range because its useful strength is still uncertain.
+    - name: "lambda_st_plus"
+      key: "train.physics_loss.lambda_st"
+      enabled: true
+      scope: ["EXP2-B-tc2020-PLUS"]
+      type: "float"
+      low: 5.0e-5
+      high: 5.0e-3
+      log: true
+
+    # Kappa initialization in positive space: expanded to span the small-to-moderate regime seen in prior runs.
+    - name: "init_kappa_plus"
+      key: "train.physics_loss.init_kappa"
+      enabled: true
+      scope: ["EXP2-B-tc2020-PLUS"]
+      type: "float"
+      low: 1.0e-4
+      high: 1.0e-2
+      log: true
+
+    # Minimum previous-ice threshold for enabling Stefan growth residuals.
+    - name: "min_prev_ice_m_plus"
+      key: "train.physics_loss.min_prev_ice_m"
+      enabled: true
+      scope: ["EXP2-B-tc2020-PLUS"]
+      type: "float"
+      low: 0.02
+      high: 0.10
+      log: false
+
+    # Rollout-stability weight: let TPE search from very conservative to fairly strong closed-loop regularization.
+    - name: "lambda_rollout_stability_plus"
+      key: "train.physics_loss.lambda_rollout_stability"
+      enabled: true
+      scope: ["EXP2-B-tc2020-PLUS"]
+      type: "float"
+      low: 5.0e-2
+      high: 2.5
+      log: true

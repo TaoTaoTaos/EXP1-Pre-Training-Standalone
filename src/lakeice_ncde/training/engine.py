@@ -9,6 +9,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import torch
+import torch.nn.functional as F
 from torch import nn
 from torch.optim import AdamW
 from torch.utils.data import DataLoader
@@ -22,6 +23,7 @@ from lakeice_ncde.training.losses import (
     check_loss_is_finite,
     compute_physics_loss,
     inverse_softplus,
+    inverse_transform_target_tensor,
 )
 from lakeice_ncde.training.schedulers import build_scheduler
 from lakeice_ncde.utils.io import save_dataframe, save_json
@@ -56,6 +58,9 @@ class Trainer:
         physics_cfg = config["train"].get("physics_loss", {})
         self.physics_loss_enabled = bool(physics_cfg.get("enabled", False))
         self.physics_loss_mode = str(physics_cfg.get("mode", "legacy_stefan"))
+        self.rollout_stability_enabled = bool(
+            physics_cfg.get("enable_rollout_stability", False)
+        )
         self.theta_kappa: nn.Parameter | None = None
         self.theta_alpha: nn.Parameter | None = None
         self.theta_alpha_decay: nn.Parameter | None = None
@@ -94,6 +99,19 @@ class Trainer:
                         )
                     )
                     optimizer_parameters.append(self.theta_alpha_decay)
+                if bool(physics_cfg.get("enable_stefan_grow", False)):
+                    # TC2020-PLUS 在原曲线项之外增加一个可训练 Stefan 增量系数。
+                    # 只有显式打开 enable_stefan_grow 的实验才初始化 theta_kappa，
+                    # 这样原 tc2020_curve 主流程不会因为继承了 legacy 配置字段而改变行为。
+                    init_kappa = float(physics_cfg.get("init_kappa", 1.0))
+                    self.theta_kappa = nn.Parameter(
+                        torch.tensor(
+                            inverse_softplus(init_kappa),
+                            dtype=torch.float32,
+                            device=self.device,
+                        )
+                    )
+                    optimizer_parameters.append(self.theta_kappa)
             else:
                 raise ValueError(
                     f"Unsupported physics loss mode: {self.physics_loss_mode}"
@@ -265,6 +283,12 @@ class Trainer:
                 "physics_lambda_curve_decay": self.config["train"].get("physics_loss", {}).get("lambda_curve_decay"),
                 "physics_lambda_nn": self.config["train"].get("physics_loss", {}).get("lambda_nn"),
                 "physics_enable_decay": self.config["train"].get("physics_loss", {}).get("enable_decay"),
+                "physics_enable_stefan_grow": self.config["train"].get("physics_loss", {}).get("enable_stefan_grow", False),
+                "physics_enable_rollout_stability": self.config["train"].get("physics_loss", {}).get("enable_rollout_stability", False),
+                "physics_lambda_rollout_stability": self.config["train"].get("physics_loss", {}).get("lambda_rollout_stability"),
+                "physics_rollout_stability_huber_beta": self.config["train"].get("physics_loss", {}).get("rollout_stability_huber_beta"),
+                "physics_min_prev_ice_m": self.config["train"].get("physics_loss", {}).get("min_prev_ice_m"),
+                "physics_grow_temp_threshold_celsius": self.config["train"].get("physics_loss", {}).get("grow_temp_threshold_celsius"),
                 "physics_kappa": None if self.theta_kappa is None else float(torch.nn.functional.softplus(self.theta_kappa).item()),
                 "physics_alpha": None if self.theta_alpha is None else float(torch.nn.functional.softplus(self.theta_alpha).item()),
                 "physics_alpha_decay": (
@@ -338,7 +362,21 @@ class Trainer:
                 theta_alpha=self.theta_alpha,
                 theta_alpha_decay=self.theta_alpha_decay,
             )
-            loss = base_loss + physics_breakdown.total
+            rollout_stability_loss = (
+                self._compute_rollout_stability_loss(batch, pred_tensor)
+                if train and self.rollout_stability_enabled
+                else pred_tensor.new_zeros(())
+            )
+            loss = (
+                base_loss
+                + physics_breakdown.total
+                + float(
+                    self.config["train"]
+                    .get("physics_loss", {})
+                    .get("lambda_rollout_stability", 0.0)
+                )
+                * rollout_stability_loss
+            )
             check_loss_is_finite(loss)
 
             if train:
@@ -371,7 +409,7 @@ class Trainer:
                     )
                 elif self.physics_loss_mode == "tc2020_curve":
                     self.logger.info(
-                        "Epoch %d/%d | %s batch %d/%d | batch_loss=%.8f | base_loss=%.8f | loss_curve_grow=%.8f | loss_curve_decay=%.8f | loss_nonneg=%.8f | physics_total=%.8f | alpha=%.8f | alpha_decay=%.8f | running_loss=%.8f",
+                        "Epoch %d/%d | %s batch %d/%d | batch_loss=%.8f | base_loss=%.8f | loss_curve_grow=%.8f | loss_curve_decay=%.8f | loss_stefan_grow=%.8f | loss_rollout_stability=%.8f | loss_nonneg=%.8f | physics_total=%.8f | alpha=%.8f | alpha_decay=%.8f | kappa=%.8f | running_loss=%.8f",
                         epoch,
                         max_epochs,
                         phase,
@@ -381,10 +419,13 @@ class Trainer:
                         float(base_loss.item()),
                         float(physics_breakdown.curve_grow.item()),
                         float(physics_breakdown.curve_decay.item()),
+                        float(physics_breakdown.stefan_grow.item()),
+                        float(rollout_stability_loss.item()),
                         float(physics_breakdown.nonneg.item()),
                         float(physics_breakdown.total.item()),
                         float(physics_breakdown.alpha.item()),
                         float(physics_breakdown.alpha_decay.item()),
+                        float(physics_breakdown.kappa.item()),
                         running_loss,
                     )
                 else:
@@ -403,6 +444,119 @@ class Trainer:
                     running_loss,
                 )
         return float(np.mean(losses))
+
+    def _compute_rollout_stability_loss(
+        self,
+        batch: Batch,
+        predictions_transformed: torch.Tensor,
+    ) -> torch.Tensor:
+        """One-step closed-loop loss for autoregressive seasonal rollout.
+
+        训练窗口默认使用真实上一观测冰厚作为 ice_prev_m；seasonal rollout 则会把模型上一天
+        的预测写回 ice_prev_m。这里用 batch 中的真实相邻观测构造一步闭环：当前样本先预测，
+        再把该预测替换进下一条样本窗口最后一行的 ice_prev_m，重新前向并监督下一条真实冰厚。
+        """
+        rollout_context = batch.rollout_context
+        if rollout_context is None:
+            return predictions_transformed.new_zeros(())
+
+        feature_columns = list(rollout_context["feature_columns"])
+        if "ice_prev_m" not in feature_columns:
+            raise ValueError(
+                "Rollout stability loss requires 'ice_prev_m' in feature_columns."
+            )
+        feature_scaler = rollout_context.get("feature_scaler") or {}
+        if "mean" not in feature_scaler or "std" not in feature_scaler:
+            raise ValueError(
+                "Rollout stability loss requires feature_scaler statistics in the coefficient bundle."
+            )
+
+        current_indices = rollout_context["current_indices"].to(self.device)
+        next_windows = rollout_context["next_windows"]
+        if current_indices.numel() == 0 or not next_windows:
+            return predictions_transformed.new_zeros(())
+
+        pred_ice = inverse_transform_target_tensor(
+            predictions_transformed[current_indices],
+            self.config["features"]["target_transform"],
+        )
+        if bool(
+            self.config["train"]
+            .get("physics_loss", {})
+            .get("rollout_stability_detach_prev_prediction", True)
+        ):
+            pred_ice = pred_ice.detach()
+
+        ice_channel = 1 + feature_columns.index("ice_prev_m")
+        modified_windows: list[torch.Tensor] = []
+        for pair_index, next_window in enumerate(next_windows):
+            path = next_window.to(self.device).clone()
+            # 只替换下一条窗口的 anchor 行。窗口里的历史行仍然保持观测历史，
+            # 这样这个项是严格的一步 rollout，而不是昂贵的整季闭环展开。
+            path[-1, ice_channel] = self._scale_feature_value(
+                pred_ice[pair_index],
+                "ice_prev_m",
+                feature_scaler,
+            )
+            if "ice_prev_available" in feature_columns:
+                path[-1, 1 + feature_columns.index("ice_prev_available")] = (
+                    self._scale_feature_value(
+                        pred_ice.new_tensor(1.0),
+                        "ice_prev_available",
+                        feature_scaler,
+                    )
+                )
+            modified_windows.append(path)
+
+        next_pred_transformed = self._predict_paths(modified_windows)
+        next_pred_ice = inverse_transform_target_tensor(
+            next_pred_transformed,
+            self.config["features"]["target_transform"],
+        )
+        next_targets = rollout_context["next_targets_raw"].to(self.device)
+        beta = float(
+            self.config["train"]
+            .get("physics_loss", {})
+            .get("rollout_stability_huber_beta", 0.1)
+        )
+        # 用 Huber 而不是纯 MSE，避免早期闭环预测偶发很大时把主监督和物理项完全淹没。
+        return F.smooth_l1_loss(next_pred_ice, next_targets, beta=beta)
+
+    def _scale_feature_value(
+        self,
+        value: torch.Tensor,
+        feature_name: str,
+        feature_scaler: dict[str, Any],
+    ) -> torch.Tensor:
+        mean = value.new_tensor(float(feature_scaler["mean"][feature_name]))
+        std = value.new_tensor(max(float(feature_scaler["std"][feature_name]), 1.0e-8))
+        return (value - mean) / std
+
+    def _predict_paths(self, paths: list[torch.Tensor]) -> torch.Tensor:
+        torchcde = _require_torchcde_for_rollout_stability()
+        interpolation = self.config["coeffs"]["interpolation"]
+        grouped_indices: dict[tuple[int, ...], list[int]] = {}
+        for index, path in enumerate(paths):
+            grouped_indices.setdefault(tuple(path.shape), []).append(index)
+
+        predictions = torch.empty(len(paths), device=self.device)
+        for indices in grouped_indices.values():
+            x = torch.stack([paths[index] for index in indices], dim=0)
+            if interpolation == "hermite":
+                coeff = torchcde.hermite_cubic_coefficients_with_backward_differences(x)
+            elif interpolation == "linear":
+                coeff = torchcde.linear_interpolation_coeffs(x)
+            elif interpolation == "rectilinear":
+                coeff = torchcde.linear_interpolation_coeffs(x, rectilinear=0)
+            else:
+                raise ValueError(f"Unsupported interpolation: {interpolation}")
+            group_pred = self.model(coeff)
+            if group_pred.ndim == 0:
+                group_pred = group_pred.unsqueeze(0)
+            predictions[torch.tensor(indices, dtype=torch.long, device=self.device)] = (
+                group_pred.reshape(-1)
+            )
+        return predictions
 
     def _predict_batch(self, batch: Batch) -> torch.Tensor:
         """Run one forward pass per same-shape coefficient group and restore the original sample order."""
@@ -438,3 +592,13 @@ def _require_physics_config_value(physics_cfg: dict, field_name: str) -> object:
             f"Physics loss mode '{physics_cfg.get('mode', 'legacy_stefan')}' requires config field '{field_name}'."
         )
     return physics_cfg[field_name]
+
+
+def _require_torchcde_for_rollout_stability():
+    try:
+        import torchcde  # type: ignore
+    except ModuleNotFoundError as exc:
+        raise ModuleNotFoundError(
+            "torchcde is required for rollout stability loss coefficient computation."
+        ) from exc
+    return torchcde
