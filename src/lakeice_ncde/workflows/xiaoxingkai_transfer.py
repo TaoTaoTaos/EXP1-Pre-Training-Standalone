@@ -44,6 +44,76 @@ class FoldSpec:
     train_lakes: list[str]
 
 
+def _format_metric_value(value: Any) -> str:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return "n/a"
+    if not np.isfinite(numeric):
+        return "n/a"
+    return f"{numeric:.8f}"
+
+
+def _build_rollout_test_summary_block(
+    *,
+    test_metrics: dict[str, Any],
+    overlap_count: int,
+    test_start: Any,
+) -> str:
+    return "\n".join(
+        [
+            "=" * 76,
+            "SEASONAL ROLLOUT TEST SUMMARY",
+            (
+                "  TEST  | "
+                f"RMSE={_format_metric_value(test_metrics.get('rmse'))} | "
+                f"Bias={_format_metric_value(test_metrics.get('bias'))} | "
+                f"R2={_format_metric_value(test_metrics.get('r2'))} | "
+                f"MAE={_format_metric_value(test_metrics.get('mae'))}"
+            ),
+            f"  META  | overlap_count={overlap_count} | test_start={test_start or 'n/a'}",
+            "=" * 76,
+        ]
+    )
+
+
+def _build_experiment_summary_block(
+    *,
+    experiment_name: str,
+    best_epoch: int,
+    best_val_rmse: float,
+    val_metrics: dict[str, Any],
+    test_metrics: dict[str, Any],
+    overlap_count: int,
+) -> str:
+    return "\n".join(
+        [
+            "=" * 76,
+            f"EXPERIMENT SUMMARY | {experiment_name}",
+            (
+                "  BEST  | "
+                f"epoch={best_epoch} | "
+                f"best_val_rmse={_format_metric_value(best_val_rmse)}"
+            ),
+            (
+                "  VAL   | "
+                f"RMSE={_format_metric_value(val_metrics.get('rmse'))} | "
+                f"MAE={_format_metric_value(val_metrics.get('mae'))} | "
+                f"R2={_format_metric_value(val_metrics.get('r2'))}"
+            ),
+            (
+                "  TEST  | "
+                f"RMSE={_format_metric_value(test_metrics.get('rmse'))} | "
+                f"Bias={_format_metric_value(test_metrics.get('bias'))} | "
+                f"R2={_format_metric_value(test_metrics.get('r2'))} | "
+                f"MAE={_format_metric_value(test_metrics.get('mae'))} | "
+                f"overlap_count={overlap_count}"
+            ),
+            "=" * 76,
+        ]
+    )
+
+
 def _time_split_training_lake(
     lake_df: pd.DataFrame,
     val_fraction: float,
@@ -469,6 +539,8 @@ def _write_experiment_summary(output_root: Path, experiment_name: str, fold_summ
         f"- Training lakes: {fold_summary['train_lakes']}",
         f"- Validation RMSE: {fold_summary['val_rmse']:.4f}",
         f"- Test RMSE: {fold_summary['test_rmse']:.4f}" if not np.isnan(fold_summary["test_rmse"]) else "- Test RMSE: n/a",
+        f"- Test Bias: {fold_summary['test_bias']:.4f}" if not np.isnan(fold_summary["test_bias"]) else "- Test Bias: n/a",
+        f"- Test R2: {fold_summary['test_r2']:.4f}" if not np.isnan(fold_summary["test_r2"]) else "- Test R2: n/a",
         f"- Test method: {fold_summary.get('test_method', 'n/a')}",
         f"- Seasonal rollout test start: {fold_summary.get('seasonal_test_start_datetime', 'n/a')}",
         "",
@@ -568,6 +640,13 @@ def _promote_seasonal_rollout_as_test(
         "Promoted seasonal rollout overlap as the only test metric source | overlap_count=%d | test_start=%s",
         overlap_count,
         run_summary.get("seasonal_test_start_datetime"),
+    )
+    logger.info(
+        _build_rollout_test_summary_block(
+            test_metrics=test_row,
+            overlap_count=overlap_count,
+            test_start=run_summary.get("seasonal_test_start_datetime"),
+        )
     )
     return {
         "metrics": test_row,
@@ -763,7 +842,11 @@ def run(config: dict, paths, base_logger) -> dict[str, Any]:
 
     metrics_df = load_dataframe(artifacts.metrics_path)
     test_rows = metrics_df.loc[metrics_df["split"] == "test"]
-    test_metrics = test_rows.iloc[0].to_dict() if not test_rows.empty else {"rmse": np.nan, "mae": np.nan, "r2": np.nan}
+    test_metrics = (
+        test_rows.iloc[0].to_dict()
+        if not test_rows.empty
+        else {"rmse": np.nan, "mae": np.nan, "r2": np.nan, "bias": np.nan}
+    )
     val_metrics = metrics_df.loc[metrics_df["split"] == "val"].iloc[0].to_dict()
     rollout_metrics = rollout_test_summary.get("rollout_metrics", {})
 
@@ -784,6 +867,7 @@ def run(config: dict, paths, base_logger) -> dict[str, Any]:
         "val_r2": float(val_metrics["r2"]),
         "test_rmse": float(test_metrics["rmse"]),
         "test_mae": float(test_metrics["mae"]),
+        "test_bias": float(test_metrics["bias"]),
         "test_r2": float(test_metrics["r2"]),
         "test_method": "seasonal_rollout_overlap",
         "seasonal_test_start_datetime": rollout_metrics.get("test_start_datetime"),
@@ -791,6 +875,16 @@ def run(config: dict, paths, base_logger) -> dict[str, Any]:
         "seasonal_rollout_overlap_end_datetime": rollout_metrics.get("overlap_end_datetime"),
     }
     _write_experiment_summary(paths.output_root, config["experiment"]["name"], fold_summary)
+    logger.info(
+        _build_experiment_summary_block(
+            experiment_name=config["experiment"]["name"],
+            best_epoch=int(summary["best_epoch"]),
+            best_val_rmse=float(summary["best_val_rmse"]),
+            val_metrics=val_metrics,
+            test_metrics=test_metrics,
+            overlap_count=int(rollout_test_summary.get("overlap_count", 0)),
+        )
+    )
     base_logger.info("Finished experiment '%s'. Run directory: %s", config["experiment"]["name"], run_context.run_dir)
     return fold_summary
 

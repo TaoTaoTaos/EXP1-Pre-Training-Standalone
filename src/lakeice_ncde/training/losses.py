@@ -25,6 +25,7 @@ class PhysicsLossBreakdown:
     curve_decay: torch.Tensor
     # 非负约束项，防止模型输出负冰厚。
     nonneg: torch.Tensor
+    daily_delta_smoothness: torch.Tensor
     # 物理损失总和，通常会按配置中的权重线性组合。
     total: torch.Tensor
     # 当前使用的有效 kappa（经过 softplus 后保证为正）。
@@ -98,6 +99,7 @@ def compute_physics_loss(
             curve_grow=zero,
             curve_decay=zero,
             nonneg=zero,
+            daily_delta_smoothness=zero,
             total=zero,
             kappa=zero,
             alpha=zero,
@@ -209,6 +211,7 @@ def _compute_legacy_stefan_loss(
         curve_grow=predictions_transformed.new_zeros(()),
         curve_decay=predictions_transformed.new_zeros(()),
         nonneg=loss_nonneg,
+        daily_delta_smoothness=predictions_transformed.new_zeros(()),
         total=total,
         kappa=kappa,
         alpha=predictions_transformed.new_zeros(()),
@@ -238,6 +241,9 @@ def _compute_tc2020_curve_loss(
     lambda_nn = float(_require_physics_config_value(physics_cfg, "lambda_nn"))
     enable_decay = bool(_require_physics_config_value(physics_cfg, "enable_decay"))
     enable_stefan_grow = bool(physics_cfg.get("enable_stefan_grow", False))
+    enable_daily_delta_smoothness = bool(
+        physics_cfg.get("enable_daily_delta_smoothness", False)
+    )
 
     pred_ice = inverse_transform_target_tensor(
         predictions_transformed, target_transform
@@ -275,15 +281,8 @@ def _compute_tc2020_curve_loss(
     loss_curve_decay = _masked_mean((pred_ice - h_curve).pow(2), decay_mask)
     zero = predictions_transformed.new_zeros(())
 
-    if enable_stefan_grow:
-        if theta_kappa is None:
-            raise ValueError(
-                "Physics loss mode 'tc2020_curve' with enable_stefan_grow=true requires theta_kappa to be initialized."
-            )
-
-        # TC2020-PLUS 只在增长期额外启用 Stefan 增量项：
-        # 这里沿用已有的 grow_mask，再叠加上一时刻冰厚、时间间隔和低温条件，避免在融化期、
-        # 初生薄冰或缺少历史观测的样本上强行施加“今天该长多少”的热力学关系。
+    prev_ice = gap_days = temp_c = prev_ok = None
+    if enable_stefan_grow or enable_daily_delta_smoothness:
         prev_ice = _get_physics_field(physics_context, "ice_prev_m", pred_ice.device)
         gap_days = _get_physics_field(
             physics_context, "ice_prev_gap_days", pred_ice.device
@@ -297,6 +296,16 @@ def _compute_tc2020_curve_loss(
             )
             > 0.5
         )
+
+    if enable_stefan_grow:
+        if theta_kappa is None:
+            raise ValueError(
+                "Physics loss mode 'tc2020_curve' with enable_stefan_grow=true requires theta_kappa to be initialized."
+            )
+
+        # TC2020-PLUS 只在增长期额外启用 Stefan 增量项：
+        # 这里沿用已有的 grow_mask，再叠加上一时刻冰厚、时间间隔和低温条件，避免在融化期、
+        # 初生薄冰或缺少历史观测的样本上强行施加“今天该长多少”的热力学关系。
         min_prev_ice_m = float(physics_cfg.get("min_prev_ice_m", 0.05))
         grow_temp_threshold_celsius = float(
             physics_cfg.get("grow_temp_threshold_celsius", -0.5)
@@ -320,12 +329,28 @@ def _compute_tc2020_curve_loss(
         kappa = zero
         loss_stefan_grow = zero
 
+    loss_daily_delta_smoothness = zero
+    if enable_daily_delta_smoothness:
+        loss_daily_delta_smoothness = _compute_daily_delta_smoothness_loss(
+            pred_ice=pred_ice,
+            physics_context=physics_context,
+            physics_cfg=physics_cfg,
+            theta_kappa=theta_kappa,
+            prev_ice=prev_ice,
+            gap_days=gap_days,
+            temp_c=temp_c,
+            prev_ok=prev_ok,
+            stable_mask=stable_mask,
+        )
+
     # 非负项保持与现有实现一致，避免新模式改动主监督外的基础约束行为。
     loss_nonneg = torch.relu(-pred_ice).square().mean()
     total = (
         lambda_curve_grow * loss_curve_grow
         + lambda_curve_decay * loss_curve_decay
         + float(physics_cfg.get("lambda_st", 0.0)) * loss_stefan_grow
+        + float(physics_cfg.get("lambda_daily_delta_smoothness", 0.0))
+        * loss_daily_delta_smoothness
         + lambda_nn * loss_nonneg
     )
     return PhysicsLossBreakdown(
@@ -334,11 +359,150 @@ def _compute_tc2020_curve_loss(
         curve_grow=loss_curve_grow,
         curve_decay=loss_curve_decay,
         nonneg=loss_nonneg,
+        daily_delta_smoothness=loss_daily_delta_smoothness,
         total=total,
         kappa=kappa,
         alpha=alpha,
         alpha_decay=alpha_decay,
     )
+
+
+def _compute_daily_delta_smoothness_loss(
+    *,
+    pred_ice: torch.Tensor,
+    physics_context: dict[str, torch.Tensor],
+    physics_cfg: dict,
+    theta_kappa: torch.Tensor | None,
+    prev_ice: torch.Tensor | None,
+    gap_days: torch.Tensor | None,
+    temp_c: torch.Tensor | None,
+    prev_ok: torch.Tensor | None,
+    stable_mask: torch.Tensor,
+) -> torch.Tensor:
+    """Constrain daily thickness changes by a local physical energy envelope.
+
+    This is not a generic smoothness penalty. It only penalizes the part of
+    ``h_t - h_{t-1}`` that exceeds physically allowed daily growth/melt:
+    Stefan freezing for growth and positive-degree-day melt for decay, with
+    optional rain heat and shortwave radiation terms.
+    """
+    if prev_ice is None or gap_days is None or temp_c is None or prev_ok is None:
+        raise ValueError(
+            "Daily delta smoothness requires ice_prev_m, ice_prev_gap_days, "
+            "Air_Temperature_celsius, and ice_prev_available in physics_context."
+        )
+
+    safe_gap_days = torch.clamp(gap_days, min=1.0e-6)
+    min_prev_ice_m = float(
+        physics_cfg.get(
+            "daily_delta_min_prev_ice_m",
+            physics_cfg.get("min_prev_ice_m", 0.05),
+        )
+    )
+    mask = (
+        prev_ok
+        & stable_mask
+        & (prev_ice >= min_prev_ice_m)
+        & (safe_gap_days > 0.0)
+    )
+
+    delta_h = pred_ice - prev_ice
+    tolerance_m = float(physics_cfg.get("daily_delta_tolerance_m", 0.02))
+
+    grow_temp_threshold_celsius = float(
+        physics_cfg.get("grow_temp_threshold_celsius", -0.5)
+    )
+    freezing_degree_days = torch.relu(-temp_c) * safe_gap_days
+    if bool(physics_cfg.get("daily_delta_use_stefan_growth_bound", True)):
+        if theta_kappa is None:
+            raise ValueError(
+                "Daily delta smoothness with Stefan growth bound requires theta_kappa."
+            )
+        kappa = F.softplus(theta_kappa)
+        max_growth = (
+            torch.sqrt(
+                torch.clamp(prev_ice.square() + kappa * freezing_degree_days, min=0.0)
+            )
+            - prev_ice
+        )
+    else:
+        growth_factor = float(
+            physics_cfg.get("daily_delta_growth_degree_day_factor_m_per_c_day", 0.01)
+        )
+        max_growth = growth_factor * freezing_degree_days
+    max_growth = torch.where(
+        temp_c < grow_temp_threshold_celsius,
+        torch.clamp(max_growth, min=0.0),
+        torch.zeros_like(max_growth),
+    )
+
+    melt_temp_threshold_celsius = float(
+        physics_cfg.get("daily_delta_melt_temp_threshold_celsius", 0.0)
+    )
+    positive_degree_days = torch.relu(temp_c - melt_temp_threshold_celsius) * safe_gap_days
+    melt_factor = float(
+        physics_cfg.get("daily_delta_melt_degree_day_factor_m_per_c_day", 0.006)
+    )
+    max_melt = melt_factor * positive_degree_days
+
+    if bool(physics_cfg.get("daily_delta_include_rain_heat", False)):
+        precipitation = _get_optional_physics_field(
+            physics_context,
+            "daily_delta_precipitation_millimeter_per_day",
+            pred_ice.device,
+        )
+        if precipitation is not None:
+            rho_water = 1000.0
+            specific_heat_water = 4186.0
+            rho_ice = float(physics_cfg.get("daily_delta_ice_density_kg_m3", 917.0))
+            latent_heat = float(
+                physics_cfg.get("daily_delta_latent_heat_fusion_j_kg", 334000.0)
+            )
+            precipitation_m = torch.clamp(precipitation, min=0.0) * safe_gap_days / 1000.0
+            rain_temp_excess = torch.relu(temp_c - melt_temp_threshold_celsius)
+            max_melt = max_melt + (
+                rho_water
+                * specific_heat_water
+                * precipitation_m
+                * rain_temp_excess
+                / (rho_ice * latent_heat)
+            )
+
+    if bool(physics_cfg.get("daily_delta_include_shortwave", False)):
+        shortwave = _get_optional_physics_field(
+            physics_context,
+            "daily_delta_shortwave_watt_per_m2",
+            pred_ice.device,
+        )
+        if shortwave is not None:
+            rho_ice = float(physics_cfg.get("daily_delta_ice_density_kg_m3", 917.0))
+            latent_heat = float(
+                physics_cfg.get("daily_delta_latent_heat_fusion_j_kg", 334000.0)
+            )
+            albedo = float(physics_cfg.get("daily_delta_ice_albedo", 0.55))
+            absorbed_shortwave = torch.clamp(shortwave, min=0.0) * max(
+                0.0, min(1.0, 1.0 - albedo)
+            )
+            shortwave_melt = absorbed_shortwave * 86400.0 * safe_gap_days / (
+                rho_ice * latent_heat
+            )
+            max_melt = max_melt + torch.where(
+                temp_c > melt_temp_threshold_celsius,
+                shortwave_melt,
+                torch.zeros_like(shortwave_melt),
+            )
+
+    upper_violation = torch.relu(delta_h - (max_growth + tolerance_m))
+    lower_violation = torch.relu((-delta_h) - (max_melt + tolerance_m))
+    violation = upper_violation + lower_violation
+    beta = float(physics_cfg.get("daily_delta_huber_beta", 0.02))
+    per_sample_loss = F.smooth_l1_loss(
+        violation,
+        torch.zeros_like(violation),
+        beta=beta,
+        reduction="none",
+    )
+    return _masked_mean(per_sample_loss, mask)
 
 
 def inverse_transform_target_tensor(
@@ -382,6 +546,15 @@ def _get_physics_field(
     if field_name not in physics_context:
         raise ValueError(f"Physics loss requires '{field_name}' in physics_context.")
     return physics_context[field_name].to(device)
+
+
+def _get_optional_physics_field(
+    physics_context: dict[str, torch.Tensor], field_name: str, device: torch.device
+) -> torch.Tensor | None:
+    value = physics_context.get(field_name)
+    if value is None:
+        return None
+    return value.to(device)
 
 
 def _masked_mean(values: torch.Tensor, mask: torch.Tensor | bool) -> torch.Tensor:

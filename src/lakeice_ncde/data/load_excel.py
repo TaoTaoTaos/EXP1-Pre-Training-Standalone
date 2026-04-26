@@ -172,8 +172,12 @@ def resolve_required_physics_columns(config: dict) -> dict[str, str]:
             "is_decay_phase": str(tc2020_cfg["decay_phase_column"]),
             "stable_ice_mask": str(tc2020_cfg["stable_ice_mask_column"]),
         }
-        if bool(physics_cfg.get("enable_stefan_grow", False)):
-            # TC2020-PLUS 的 Stefan 增量项还需要上一观测冰厚、间隔天数、
+        requires_local_delta_fields = bool(
+            physics_cfg.get("enable_stefan_grow", False)
+            or physics_cfg.get("enable_daily_delta_smoothness", False)
+        )
+        if requires_local_delta_fields:
+            # TC2020-PLUS 的局地增量项还需要上一观测冰厚、间隔天数、
             # 当前气温和上一观测是否存在。只在 PLUS 开关打开时加入这些字段，
             # 避免原 tc2020_curve 缓存与训练上下文被无关字段污染。
             required_columns.update(
@@ -188,6 +192,21 @@ def resolve_required_physics_columns(config: dict) -> dict[str, str]:
                     ),
                 }
             )
+        if bool(physics_cfg.get("enable_daily_delta_smoothness", False)):
+            if bool(physics_cfg.get("daily_delta_include_rain_heat", False)):
+                required_columns["daily_delta_precipitation_millimeter_per_day"] = str(
+                    physics_cfg.get(
+                        "daily_delta_precipitation_column",
+                        "Precipitation_millimeterPerDay",
+                    )
+                )
+            if bool(physics_cfg.get("daily_delta_include_shortwave", False)):
+                required_columns["daily_delta_shortwave_watt_per_m2"] = str(
+                    physics_cfg.get(
+                        "daily_delta_shortwave_column",
+                        "Shortwave_Radiation_Downwelling_wattPerMeterSquared",
+                    )
+                )
         return required_columns
     raise ValueError(f"Unsupported physics loss mode: {mode}")
 

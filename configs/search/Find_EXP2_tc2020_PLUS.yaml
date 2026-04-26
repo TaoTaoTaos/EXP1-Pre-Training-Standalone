@@ -1,8 +1,9 @@
 search:
   # Broad-range TPE coarse search for EXP2-B-tc2020-PLUS physics/stability parameters.
-  name: "Find_EXP2_tc2020_PLUS_tpe_wide_v1_run01"
+  # This revision also searches model capacity around the current hidden-width defaults.
+  name: "Find_EXP2_tc2020_PLUS_tpe_wide_plus6_v1_run01"
   base_batch_config: "configs/experiments/Run-EXP2-B-tc2020-PLUS.yaml"
-  output_root: "outputs/search_runs/Find_EXP2_tc2020_PLUS/02_tpe_wide"
+  output_root: "outputs/search_runs/Find_EXP2_tc2020_PLUS/03_tpe_wide_plus6"
   # Coarse search budget: let TPE explore wide ranges first, then narrow later.
   n_trials: 200
 
@@ -66,6 +67,26 @@ search:
       high: 1.0e-2
       log: true
 
+    # TC2020 growth-curve initialization: strongly coupled with lambda_curve_grow.
+    - name: "init_alpha_plus"
+      key: "train.physics_loss.init_alpha"
+      enabled: true
+      scope: ["EXP2-B-tc2020-PLUS"]
+      type: "float"
+      low: 1.0
+      high: 2.4
+      log: false
+
+    # TC2020 decay-curve initialization: strongly coupled with lambda_curve_decay.
+    - name: "init_alpha_decay_plus"
+      key: "train.physics_loss.init_alpha_decay"
+      enabled: true
+      scope: ["EXP2-B-tc2020-PLUS"]
+      type: "float"
+      low: 0.8
+      high: 2.0
+      log: false
+
     # Minimum previous-ice threshold for enabling Stefan growth residuals.
     - name: "min_prev_ice_m_plus"
       key: "train.physics_loss.min_prev_ice_m"
@@ -85,3 +106,43 @@ search:
       low: 5.0e-2
       high: 2.5
       log: true
+
+    # Huber beta for the one-step closed-loop rollout stability loss.
+    - name: "rollout_stability_huber_beta_plus"
+      key: "train.physics_loss.rollout_stability_huber_beta"
+      enabled: true
+      scope: ["EXP2-B-tc2020-PLUS"]
+      type: "float"
+      low: 3.0e-2
+      high: 3.0e-1
+      log: true
+
+    # NeuralCDE hidden state width: centered around the current default of 50 while allowing moderate expansion.
+    - name: "hidden_channels_plus"
+      key: "model.hidden_channels"
+      enabled: true
+      scope: ["EXP2-B-tc2020-PLUS"]
+      type: "int"
+      low: 40
+      high: 72
+      step: 2
+
+    # Internal MLP width inside the CDE vector field: centered around the current default of 110.
+    - name: "hidden_hidden_channels_plus"
+      key: "model.hidden_hidden_channels"
+      enabled: true
+      scope: ["EXP2-B-tc2020-PLUS"]
+      type: "int"
+      low: 90
+      high: 150
+      step: 2
+
+    # Depth of the vector-field MLP: keep a compact search around the current 4-layer setting.
+    - name: "num_hidden_layers_plus"
+      key: "model.num_hidden_layers"
+      enabled: true
+      scope: ["EXP2-B-tc2020-PLUS"]
+      type: "int"
+      low: 3
+      high: 6
+      step: 1

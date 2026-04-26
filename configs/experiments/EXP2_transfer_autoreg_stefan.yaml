@@ -23,10 +23,10 @@ train:
   physics_loss:
     enabled: true
     rule: "stefan_growth_residual"
-    lambda_st: 0.02
+    lambda_st: 0.005
     lambda_nn: 1.0
-    init_kappa: 0.0085
-    min_prev_ice_m: 1.0e-3
+    init_kappa: 0.0017
+    min_prev_ice_m: 0.085
     grow_temp_threshold_celsius: -0.5
     prev_ice_column: "ice_prev_m"
     gap_days_column: "ice_prev_gap_days"

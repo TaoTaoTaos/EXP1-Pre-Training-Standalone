@@ -18,24 +18,50 @@ split:
 
 train:
   physics_loss:
-    enabled: true
-    mode: "tc2020_curve"
-    lambda_curve_grow: 2.207949382566043e-5
-    lambda_curve_decay: 2.7384564133059674e-5
-    lambda_nn: 1.0
-    enable_decay: true
-    init_alpha: 2.052281481303221
-    init_alpha_decay: 1.0497575416001597
+    # EXP2-B 已经定义 TC2020 曲线项；PLUS 这里只新增一个 growth-only Stefan 局部增量约束。
     enable_stefan_grow: true
-    lambda_st: 5.576325248013702e-4
-    init_kappa: 1.793098208665305e-4
-    min_prev_ice_m: 0.07509058953241106
-    grow_temp_threshold_celsius: -0.5
-    prev_ice_column: "ice_prev_m"
-    gap_days_column: "ice_prev_gap_days"
-    temperature_column: "Air_Temperature_celsius"
-    prev_available_column: "ice_prev_available"
+    # Stefan 增量项权重；越大，模型越需要满足“冷天冻结度日增加 -> 冰厚平方增加”的局部物理关系。
+    lambda_st: 5.6e-4
+    # Stefan 系数初值；训练中同样用 softplus 保证 kappa 为正。
+    init_kappa: 0.0017
+    # 只有上一时刻冰厚达到这个阈值时才启用 Stefan 项，避免初生薄冰/开水阶段噪声过强。
+    min_prev_ice_m: 0.08
+
+    # PLUS 再新增闭环 rollout 稳定损失，训练时模拟“今天预测会成为明天的历史冰厚”。
     enable_rollout_stability: true
-    lambda_rollout_stability: 0.7548752233976175
-    rollout_stability_huber_beta: 0.26286165998444955
+    # 闭环稳定项权重；越大越强调连续 rollout 不发散，但过大可能压低单步拟合自由度。
+
+    lambda_rollout_stability: 2.5
+
+
+    # 闭环稳定项使用 Smooth L1/Huber 的 beta，降低早期大误差带来的梯度冲击。
+    rollout_stability_huber_beta: 0.1
+    # true 表示不让“当前预测作为下一步输入”的那条路径反向传梯度，训练更稳。
     rollout_stability_detach_prev_prediction: true
+
+    # 物理日增量平滑项：不直接惩罚 Δh 本身，而是惩罚超过局地能量包络的日变化。
+    # 增长期上界来自 Stefan 冻结度日；融化期上界来自正积温融化潜势，可加入雨热项。
+    enable_daily_delta_smoothness: true
+
+    # 日增量平滑项权重；越大越抑制“单日物理不可能跳变”，过大可能让融化响应偏慢。
+
+    lambda_daily_delta_smoothness: 0.25
+
+
+    # 对超出物理包络的部分使用 Smooth L1；0.02 m 约等于 2 cm 的软阈值。
+    daily_delta_huber_beta: 0.015
+    # 物理包络外再给 3 cm 容差，避免把观测噪声或局地空间差异当成违规。
+    daily_delta_tolerance_m: 0.015
+    # 只有上一时刻冰厚足够稳定时才启用，避开开水/初生薄冰阶段。
+    daily_delta_min_prev_ice_m: 0.08
+    # 增长上界复用可训练 Stefan kappa：h_t^2 - h_{t-1}^2 不能超过冻结度日支持的量。
+    daily_delta_use_stefan_growth_bound: true
+    # 融化从 0°C 以上的正积温开始计算。
+    daily_delta_melt_temp_threshold_celsius: 0.0
+    # 冰的经验融化度日因子，单位 m / (°C day)；0.006 表示每个正积温日约 6 mm 融化潜势。
+    daily_delta_melt_degree_day_factor_m_per_c_day: 0.006
+    # 加入雨水显热项；该项按 rho_w * c_w * rain * max(T, 0) / (rho_i * L_f) 换算为可融冰厚。
+    daily_delta_include_rain_heat: true
+    daily_delta_precipitation_column: "Precipitation_millimeterPerDay"
+    # 当前 seasonal rollout 使用单时次短波，不能代表日均净辐射；先不启用短波能量项。
+    daily_delta_include_shortwave: false

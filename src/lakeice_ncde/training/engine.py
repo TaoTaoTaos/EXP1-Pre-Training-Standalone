@@ -44,6 +44,90 @@ class TrainArtifacts:
     run_summary_path: Path
 
 
+def _format_metric_value(value: Any) -> str:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return "n/a"
+    if not np.isfinite(numeric):
+        return "n/a"
+    return f"{numeric:.8f}"
+
+
+def _build_epoch_summary_block(
+    *,
+    epoch: int,
+    max_epochs: int,
+    train_loss: float,
+    val_loss: float,
+    val_metrics: dict[str, Any],
+    learning_rate: float,
+    best_epoch: int,
+    best_val_rmse: float,
+    improved: bool,
+) -> str:
+    status = "NEW BEST" if improved else "KEEPING BEST"
+    return "\n".join(
+        [
+            "=" * 76,
+            f"EPOCH {epoch}/{max_epochs} COMPLETE | {status}",
+            f"  TRAIN | loss={train_loss:.8f}",
+            (
+                "  VAL   | "
+                f"loss={val_loss:.8f} | "
+                f"RMSE={_format_metric_value(val_metrics.get('rmse'))} | "
+                f"MAE={_format_metric_value(val_metrics.get('mae'))} | "
+                f"R2={_format_metric_value(val_metrics.get('r2'))} | "
+                f"LR={learning_rate:.8f}"
+            ),
+            (
+                "  BEST  | "
+                f"epoch={best_epoch} | "
+                f"val_rmse={_format_metric_value(best_val_rmse)}"
+            ),
+            "=" * 76,
+        ]
+    )
+
+
+def _build_final_evaluation_block(
+    *,
+    val_loss: float,
+    val_metrics: dict[str, Any],
+    test_loss: float,
+    test_metrics: dict[str, Any],
+    best_epoch: int,
+    best_val_rmse: float,
+) -> str:
+    return "\n".join(
+        [
+            "=" * 76,
+            "FINAL EVALUATION",
+            (
+                "  BEST  | "
+                f"epoch={best_epoch} | "
+                f"best_val_rmse={_format_metric_value(best_val_rmse)}"
+            ),
+            (
+                "  VAL   | "
+                f"loss={_format_metric_value(val_loss)} | "
+                f"RMSE={_format_metric_value(val_metrics.get('rmse'))} | "
+                f"MAE={_format_metric_value(val_metrics.get('mae'))} | "
+                f"R2={_format_metric_value(val_metrics.get('r2'))}"
+            ),
+            (
+                "  TEST  | "
+                f"loss={_format_metric_value(test_loss)} | "
+                f"RMSE={_format_metric_value(test_metrics.get('rmse'))} | "
+                f"Bias={_format_metric_value(test_metrics.get('bias'))} | "
+                f"R2={_format_metric_value(test_metrics.get('r2'))} | "
+                f"MAE={_format_metric_value(test_metrics.get('mae'))}"
+            ),
+            "=" * 76,
+        ]
+    )
+
+
 class Trainer:
     """Manual trainer for NeuralCDE experiments."""
 
@@ -99,10 +183,19 @@ class Trainer:
                         )
                     )
                     optimizer_parameters.append(self.theta_alpha_decay)
-                if bool(physics_cfg.get("enable_stefan_grow", False)):
+                requires_kappa = bool(
+                    physics_cfg.get("enable_stefan_grow", False)
+                    or (
+                        physics_cfg.get("enable_daily_delta_smoothness", False)
+                        and physics_cfg.get(
+                            "daily_delta_use_stefan_growth_bound", True
+                        )
+                    )
+                )
+                if requires_kappa:
                     # TC2020-PLUS 在原曲线项之外增加一个可训练 Stefan 增量系数。
-                    # 只有显式打开 enable_stefan_grow 的实验才初始化 theta_kappa，
-                    # 这样原 tc2020_curve 主流程不会因为继承了 legacy 配置字段而改变行为。
+                    # Stefan 增长项或 daily-delta 的 Stefan 增长上界需要它；
+                    # 原 tc2020_curve 主流程不会因为继承了 legacy 配置字段而改变行为。
                     init_kappa = float(physics_cfg.get("init_kappa", 1.0))
                     self.theta_kappa = nn.Parameter(
                         torch.tensor(
@@ -171,20 +264,12 @@ class Trainer:
                 "lr": float(self.optimizer.param_groups[0]["lr"]),
             }
             self.history.log_epoch(row)
-            self.logger.info(
-                "Epoch %d complete | train_loss=%.8f | val_loss=%.8f | val_rmse=%.8f | val_mae=%.8f | val_r2=%.8f",
-                epoch,
-                train_loss,
-                val_loss,
-                val_metrics["rmse"],
-                val_metrics["mae"],
-                val_metrics["r2"],
-            )
 
             checkpoint_state = self._build_checkpoint_state(epoch)
 
             current_metric = val_metrics["rmse"]
             min_delta = float(self.config["train"]["early_stopping"]["min_delta"])
+            improved = False
             if current_metric < (self.best_metric - min_delta):
                 self.best_metric = current_metric
                 self.best_epoch = epoch
@@ -193,10 +278,24 @@ class Trainer:
                 self.best_state = copy.deepcopy(checkpoint_state)
                 save_checkpoint(best_ckpt_path, self.best_state)
                 save_dataframe(val_predictions, self.run_dir / "val_predictions.csv")
+                improved = True
             else:
                 self.bad_epochs += 1
 
             save_checkpoint(latest_ckpt_path, checkpoint_state)
+            self.logger.info(
+                _build_epoch_summary_block(
+                    epoch=epoch,
+                    max_epochs=max_epochs,
+                    train_loss=train_loss,
+                    val_loss=val_loss,
+                    val_metrics=val_metrics,
+                    learning_rate=float(row["lr"]),
+                    best_epoch=self.best_epoch,
+                    best_val_rmse=self.best_metric,
+                    improved=improved,
+                )
+            )
 
             if self.scheduler is not None:
                 if self.config["train"]["scheduler"]["name"] == "reduce_on_plateau":
@@ -260,11 +359,14 @@ class Trainer:
 
         duration_seconds = time.time() - start_time
         self.logger.info(
-            "Final evaluation | val_loss=%.8f | test_loss=%.8f | best_val_rmse=%.8f | best_epoch=%d",
-            val_loss,
-            test_loss,
-            self.best_metric,
-            self.best_epoch,
+            _build_final_evaluation_block(
+                val_loss=val_loss,
+                val_metrics=val_metrics,
+                test_loss=test_loss,
+                test_metrics=test_metrics,
+                best_epoch=self.best_epoch,
+                best_val_rmse=self.best_metric,
+            )
         )
         save_json(
             {
@@ -287,6 +389,11 @@ class Trainer:
                 "physics_enable_rollout_stability": self.config["train"].get("physics_loss", {}).get("enable_rollout_stability", False),
                 "physics_lambda_rollout_stability": self.config["train"].get("physics_loss", {}).get("lambda_rollout_stability"),
                 "physics_rollout_stability_huber_beta": self.config["train"].get("physics_loss", {}).get("rollout_stability_huber_beta"),
+                "physics_enable_daily_delta_smoothness": self.config["train"].get("physics_loss", {}).get("enable_daily_delta_smoothness", False),
+                "physics_lambda_daily_delta_smoothness": self.config["train"].get("physics_loss", {}).get("lambda_daily_delta_smoothness"),
+                "physics_daily_delta_huber_beta": self.config["train"].get("physics_loss", {}).get("daily_delta_huber_beta"),
+                "physics_daily_delta_melt_degree_day_factor_m_per_c_day": self.config["train"].get("physics_loss", {}).get("daily_delta_melt_degree_day_factor_m_per_c_day"),
+                "physics_daily_delta_tolerance_m": self.config["train"].get("physics_loss", {}).get("daily_delta_tolerance_m"),
                 "physics_min_prev_ice_m": self.config["train"].get("physics_loss", {}).get("min_prev_ice_m"),
                 "physics_grow_temp_threshold_celsius": self.config["train"].get("physics_loss", {}).get("grow_temp_threshold_celsius"),
                 "physics_kappa": None if self.theta_kappa is None else float(torch.nn.functional.softplus(self.theta_kappa).item()),
@@ -409,7 +516,7 @@ class Trainer:
                     )
                 elif self.physics_loss_mode == "tc2020_curve":
                     self.logger.info(
-                        "Epoch %d/%d | %s batch %d/%d | batch_loss=%.8f | base_loss=%.8f | loss_curve_grow=%.8f | loss_curve_decay=%.8f | loss_stefan_grow=%.8f | loss_rollout_stability=%.8f | loss_nonneg=%.8f | physics_total=%.8f | alpha=%.8f | alpha_decay=%.8f | kappa=%.8f | running_loss=%.8f",
+                        "Epoch %d/%d | %s batch %d/%d | batch_loss=%.8f | base_loss=%.8f | loss_curve_grow=%.8f | loss_curve_decay=%.8f | loss_stefan_grow=%.8f | loss_daily_delta_smoothness=%.8f | loss_rollout_stability=%.8f | loss_nonneg=%.8f | physics_total=%.8f | alpha=%.8f | alpha_decay=%.8f | kappa=%.8f | running_loss=%.8f",
                         epoch,
                         max_epochs,
                         phase,
@@ -420,6 +527,7 @@ class Trainer:
                         float(physics_breakdown.curve_grow.item()),
                         float(physics_breakdown.curve_decay.item()),
                         float(physics_breakdown.stefan_grow.item()),
+                        float(physics_breakdown.daily_delta_smoothness.item()),
                         float(rollout_stability_loss.item()),
                         float(physics_breakdown.nonneg.item()),
                         float(physics_breakdown.total.item()),

@@ -23,17 +23,17 @@ train:
     # 使用 AFDD/ATDD 驱动的曲线约束，而不是 legacy Stefan 残差。
     mode: "tc2020_curve"
     # 生长期曲线约束权重，约束 pred_ice 贴近 alpha * sqrt(AFDD)。
-    lambda_curve_grow: 0.00001
+    lambda_curve_grow: 8.145003090481624e-6
     # 消融期曲线约束权重，只有 enable_decay=true 时才会实际生效。
-    lambda_curve_decay: 0.00008
+    lambda_curve_decay: 4.079174077868327e-5
     # 非负约束权重，防止预测冰厚出现负值。
     lambda_nn: 1.0
     # 是否启用 -alpha_decay * ATDD 的消融项；开启后春季退冰会被显式约束。
     enable_decay: true
     # alpha 的初始值；训练时实际参数为 softplus(theta_alpha)，保证始终大于 0。
-    init_alpha: 1.6
+    init_alpha: 1.9417306464583717
     # alpha_decay 的初始值；只有 enable_decay=true 时才参与训练。
-    init_alpha_decay: 1.3
+    init_alpha_decay: 1.4975786198921737
     # 用于累计 AFDD/ATDD 的气温列。
     temperature_column: "Air_Temperature_celsius"
     # 累计冻结度日列名，表示冰季内从 season_start_month 开始累计的 AFDD。
